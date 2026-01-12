@@ -86,6 +86,23 @@ namespace OrderUp.API.Data
             modelBuilder.Entity<OrderItemAddon>()
                 .Property(a => a.UnitPriceSnapshot)
                 .HasPrecision(18, 2);
+
+            // Unique indexes for data integrity
+            modelBuilder.Entity<ProductCategory>()
+                .HasIndex(c => c.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<Addon>()
+                .HasIndex(a => a.Name)
+                .IsUnique();
+
+            modelBuilder.Entity<ProductVariant>()
+                .HasIndex(v => new { v.ProductId, v.Name })
+                .IsUnique();
+
+            // Performance indexes
+            modelBuilder.Entity<Order>()
+                .HasIndex(o => o.CreatedAtUtc);
         }
     }
 }
