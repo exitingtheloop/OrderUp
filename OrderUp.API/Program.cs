@@ -3,6 +3,7 @@ using Microsoft.OpenApi;
 using OrderUp.API.Data;
 using OrderUp.API.Data.Seed;
 using OrderUp.API.Services.Menu;
+using OrderUp.API.Services.Orders;
 using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();

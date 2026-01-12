@@ -1,0 +1,126 @@
+using Microsoft.EntityFrameworkCore;
+using OrderUp.API.Data;
+using OrderUp.API.Data.Entities;
+using OrderUp.API.Mapping;
+using OrderUp.Shared.Contracts.Orders.Requests;
+using OrderUp.Shared.Contracts.Orders.Responses;
+
+namespace OrderUp.API.Services.Orders;
+
+public class OrderService : IOrderService
+{
+    private readonly DataContext _context;
+
+    public OrderService(DataContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request)
+    {
+        // Load all required products, variants, and addons for validation
+        var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
+        var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
+        var addonIds = request.Items
+            .SelectMany(i => i.Addons)
+            .Select(a => a.AddonId)
+            .Distinct()
+            .ToList();
+
+        var products = await _context.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id);
+
+        var variants = await _context.ProductVariants
+            .Where(v => variantIds.Contains(v.Id))
+            .ToDictionaryAsync(v => v.Id);
+
+        var addons = await _context.Addons
+            .Where(a => addonIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id);
+
+        // Validate and build order
+        var order = new Order
+        {
+            CustomerName = request.CustomerName,
+            CustomerPhone = request.CustomerPhone,
+            PickupTimeUtc = request.PickupTimeUtc,
+            CreatedAtUtc = DateTime.UtcNow,
+            Status = OrderStatus.Pending,
+            PaymentStatus = PaymentStatus.Pending
+        };
+
+        foreach (var itemRequest in request.Items)
+        {
+            // Validate quantity
+            if (itemRequest.Quantity <= 0) throw new InvalidOperationException($"Item quantity must be greater than 0.");
+
+            // Validate product
+            if (!products.TryGetValue(itemRequest.ProductId, out var product)) 
+                throw new InvalidOperationException($"Product {itemRequest.ProductId} not found.");
+ 
+            if (!product.IsAvailable)
+                throw new InvalidOperationException($"Product '{product.Name}' is not available.");
+
+            // Validate variant
+            if (!variants.TryGetValue(itemRequest.VariantId, out var variant))
+                throw new InvalidOperationException($"Variant {itemRequest.VariantId} not found.");
+
+            if (variant.ProductId != product.Id)
+                throw new InvalidOperationException($"Variant '{variant.Name}' does not belong to product '{product.Name}'.");
+
+            if (!variant.IsAvailable)
+                throw new InvalidOperationException($"Variant '{variant.Name}' is not available.");
+
+            var orderItem = new OrderItem
+            {
+                ProductId = product.Id,
+                VariantId = variant.Id,
+                Quantity = itemRequest.Quantity,
+                Notes = itemRequest.Notes,
+                BaseUnitPriceSnapshot = variant.Price,
+                ProductNameSnapshot = product.Name,
+                VariantNameSnapshot = variant.Name
+            };
+
+            // Validate and add addons
+            foreach (var addonRequest in itemRequest.Addons)
+            {
+                if (addonRequest.Quantity <= 0)
+                    throw new InvalidOperationException($"Addon quantity must be greater than 0.");
+
+                if (!addons.TryGetValue(addonRequest.AddonId, out var addon))
+                    throw new InvalidOperationException($"Addon {addonRequest.AddonId} not found.");
+
+                if (!addon.IsAvailable)
+                    throw new InvalidOperationException($"Addon '{addon.Name}' is not available.");
+
+                orderItem.Addons.Add(new OrderItemAddon
+                {
+                    AddonId = addon.Id,
+                    Quantity = addonRequest.Quantity,
+                    UnitPriceSnapshot = addon.Price,
+                    NameSnapshot = addon.Name,
+                    GroupSnapshot = addon.Group
+                });
+            }
+
+            order.Items.Add(orderItem);
+        }
+
+        _context.Orders.Add(order);
+        await _context.SaveChangesAsync();
+        return new CreateOrderResponse(order.Id);
+    }
+
+    public async Task<OrderDto?> GetOrderAsync(int id)
+    {
+        var order = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Items)
+            .ThenInclude(i => i.Addons)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        return order?.ToDto();
+    }
+}
