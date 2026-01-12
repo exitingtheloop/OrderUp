@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Contracts\Menu\Responses\" />
+    <Folder Include="Contracts\Menu\Requests\" />
+    <Folder Include="Contracts\Orders\Responses\" />
+    <Folder Include="Contracts\Orders\Requests\" />
+    <Folder Include="Contracts\Webhooks\" />
+    <Folder Include="Contracts\Payments\" />
+    <Folder Include="Enums\" />
+    <Folder Include="Validation\" />
+  </ItemGroup>
+
+</Project>
