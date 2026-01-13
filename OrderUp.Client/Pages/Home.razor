@@ -1,7 +1,278 @@
 ﻿@page "/"
+@using OrderUp.Client.Services
+@using OrderUp.Client.State
+@using OrderUp.Shared.Contracts.Menu.Responses
+@inject MenuApi MenuApi
+@inject CartState Cart
 
-<PageTitle>Home</PageTitle>
+<PageTitle>OrderUp - Menu</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container">
+    <h1 class="mb-4">Menu</h1>
 
-Welcome to your new app.
+    @if (_loading)
+    {
+        <p><em>Loading menu...</em></p>
+    }
+    else if (_menu is null)
+    {
+        <div class="alert alert-danger">Failed to load menu. Please try again.</div>
+    }
+    else
+    {
+        @foreach (var category in _menu.Categories)
+        {
+            var productsInCategory = _menu.Products.Where(p => p.CategoryId == category.Id).ToList();
+            if (productsInCategory.Count == 0) continue;
+
+            <div class="mb-4">
+                <h2 class="border-bottom pb-2">@category.Name</h2>
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                    @foreach (var product in productsInCategory)
+                    {
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">@product.Name</h5>
+                                    @if (!string.IsNullOrEmpty(product.Description))
+                                    {
+                                        <p class="card-text text-muted small">@product.Description</p>
+                                    }
+                                    <p class="card-text">
+                                        <strong>
+                                            @if (product.Variants.Count == 1)
+                                            {
+                                                @:₱@product.Variants[0].Price.ToString("N2")
+                                            }
+                                            else
+                                            {
+                                                var minPrice = product.Variants.Min(v => v.Price);
+                                                var maxPrice = product.Variants.Max(v => v.Price);
+                                                @:₱@minPrice.ToString("N2") - ₱@maxPrice.ToString("N2")
+                                            }
+                                        </strong>
+                                    </p>
+                                    <button class="btn btn-primary btn-sm" @onclick="() => OpenCustomizer(product)">
+                                        Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@* Product Customization Modal *@
+@if (_selectedProduct is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@_selectedProduct.Name</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCustomizer"></button>
+                </div>
+                <div class="modal-body">
+                    @* Size Selection (Required) *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Size <span class="text-danger">*</span></label>
+                        @foreach (var variant in _selectedProduct.Variants)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="variant" id="variant-@variant.Id"
+                                       checked="@(_selectedVariantId == variant.Id)"
+                                       @onchange="() => SelectVariant(variant.Id)">
+                                <label class="form-check-label" for="variant-@variant.Id">
+                                    @variant.Name - ₱@variant.Price.ToString("N2")
+                                </label>
+                            </div>
+                        }
+                    </div>
+
+                    @* Addons (Optional) *@
+                    @if (_menu?.Addons.Count > 0)
+                    {
+                        var addonGroups = _menu.Addons.GroupBy(a => a.Group);
+                        @foreach (var group in addonGroups)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">@group.Key</label>
+                                @foreach (var addon in group)
+                                {
+                                    var currentQty = GetAddonQuantity(addon.Id);
+                                    var maxQty = addon.MaxPerItem ?? 10;
+
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span>@addon.Name (+₱@addon.Price.ToString("N2"))</span>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-secondary"
+                                                    @onclick="() => DecreaseAddon(addon)"
+                                                    disabled="@(currentQty == 0)">
+                                                −
+                                            </button>
+                                            <span class="btn btn-outline-secondary disabled" style="min-width: 40px;">
+                                                @currentQty
+                                            </span>
+                                            <button class="btn btn-outline-secondary"
+                                                    @onclick="() => IncreaseAddon(addon)"
+                                                    disabled="@(currentQty >= maxQty)">
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @* Notes *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Special Instructions</label>
+                        <textarea class="form-control" rows="2" placeholder="Any special requests?"
+                                  @bind="_notes"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto">
+                        <strong>Total: ₱@CalculateItemTotal().ToString("N2")</strong>
+                    </div>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCustomizer">Cancel</button>
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="AddToCart"
+                            disabled="@(_selectedVariantId is null)">
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private MenuDto? _menu;
+    private bool _loading = true;
+
+    // Customizer state
+    private ProductDto? _selectedProduct;
+    private int? _selectedVariantId;
+    private Dictionary<int, int> _selectedAddons = new();
+    private string? _notes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _menu = await MenuApi.GetMenuAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCustomizer(ProductDto product)
+    {
+        _selectedProduct = product;
+        _selectedVariantId = product.Variants.FirstOrDefault(v => v.IsDefault)?.Id ?? product.Variants.FirstOrDefault()?.Id;
+        _selectedAddons.Clear();
+        _notes = null;
+    }
+
+    private void CloseCustomizer()
+    {
+        _selectedProduct = null;
+        _selectedVariantId = null;
+        _selectedAddons.Clear();
+        _notes = null;
+    }
+
+    private void SelectVariant(int variantId)
+    {
+        _selectedVariantId = variantId;
+    }
+
+    private int GetAddonQuantity(int addonId)
+    {
+        return _selectedAddons.TryGetValue(addonId, out var qty) ? qty : 0;
+    }
+
+    private void IncreaseAddon(AddonDto addon)
+    {
+        var maxQty = addon.MaxPerItem ?? 10;
+        var currentQty = GetAddonQuantity(addon.Id);
+        if (currentQty < maxQty)
+        {
+            _selectedAddons[addon.Id] = currentQty + 1;
+        }
+    }
+
+    private void DecreaseAddon(AddonDto addon)
+    {
+        var currentQty = GetAddonQuantity(addon.Id);
+        if (currentQty > 0)
+        {
+            _selectedAddons[addon.Id] = currentQty - 1;
+            if (_selectedAddons[addon.Id] == 0)
+            {
+                _selectedAddons.Remove(addon.Id);
+            }
+        }
+    }
+
+    private decimal CalculateItemTotal()
+    {
+        if (_selectedProduct is null || _selectedVariantId is null || _menu is null)
+            return 0;
+
+        var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
+        var total = variant.Price;
+
+        foreach (var (addonId, qty) in _selectedAddons)
+        {
+            var addon = _menu.Addons.First(a => a.Id == addonId);
+            total += addon.Price * qty;
+        }
+
+        return total;
+    }
+
+    private void AddToCart()
+    {
+        if (_selectedProduct is null || _selectedVariantId is null || _menu is null)
+            return;
+
+        var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
+
+        var cartItem = new CartItem
+        {
+            ProductId = _selectedProduct.Id,
+            ProductName = _selectedProduct.Name,
+            VariantId = variant.Id,
+            VariantName = variant.Name,
+            VariantPrice = variant.Price,
+            Quantity = 1,
+            Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes,
+            Addons = _selectedAddons
+                .Where(kvp => kvp.Value > 0)
+                .Select(kvp =>
+                {
+                    var addon = _menu.Addons.First(a => a.Id == kvp.Key);
+                    return new CartItemAddon
+                    {
+                        AddonId = addon.Id,
+                        Name = addon.Name,
+                        Price = addon.Price,
+                        Quantity = kvp.Value
+                    };
+                })
+                .ToList()
+        };
+
+        Cart.AddItem(cartItem);
+        CloseCustomizer();
+    }
+}
