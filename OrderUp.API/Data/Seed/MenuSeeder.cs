@@ -10,6 +10,7 @@ public static class MenuSeeder
         await SeedCategoriesAsync(context);
         await SeedProductsAsync(context);
         await SeedAddonsAsync(context);
+        await SeedProductAddonsAsync(context);
     }
 
     private static async Task SeedCategoriesAsync(DataContext context)
@@ -153,5 +154,69 @@ public static class MenuSeeder
 
         context.Addons.AddRange(addons);
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedProductAddonsAsync(DataContext context)
+    {
+        // Load all products with their categories
+        var products = await context.Products
+            .Include(p => p.Category)
+            .ToListAsync();
+
+        // Load all addons
+        var addons = await context.Addons.ToListAsync();
+
+        // Load existing mappings to ensure idempotency
+        var existingMappingsList = await context.ProductAddons
+            .Select(pa => new { pa.ProductId, pa.AddonId })
+            .ToListAsync();
+        var existingMappings = existingMappingsList
+            .Select(x => (x.ProductId, x.AddonId))
+            .ToHashSet();
+
+        // Define addon eligibility by group per category
+        // Coffee: all addons (Espresso, Milk, Syrup, Toppings)
+        // Non-Coffee: Milk, Syrup, Toppings (no Espresso/Extra Shot)
+        // Pastries: Toppings only
+
+        var coffeeGroups = new HashSet<string> { "Espresso", "Milk", "Syrup", "Toppings" };
+        var nonCoffeeGroups = new HashSet<string> { "Milk", "Syrup", "Toppings" };
+        var pastryGroups = new HashSet<string> { "Toppings" };
+
+        var productAddonsToAdd = new List<ProductAddon>();
+
+        foreach (var product in products)
+        {
+            var allowedGroups = product.Category.Name switch
+            {
+                "Coffee" => coffeeGroups,
+                "Non-Coffee" => nonCoffeeGroups,
+                "Pastries" => pastryGroups,
+                _ => new HashSet<string>() // Unknown categories get no addons
+            };
+
+            foreach (var addon in addons)
+            {
+                // Skip if addon group is not allowed for this category
+                if (!allowedGroups.Contains(addon.Group))
+                    continue;
+
+                // Skip if mapping already exists (idempotency)
+                if (existingMappings.Contains((product.Id, addon.Id)))
+                    continue;
+
+                productAddonsToAdd.Add(new ProductAddon
+                {
+                    ProductId = product.Id,
+                    AddonId = addon.Id
+                });
+            }
+        }
+
+        if (productAddonsToAdd.Count > 0)
+        {
+            context.ProductAddons.AddRange(productAddonsToAdd);
+            await context.SaveChangesAsync();
+        }
     }
 }
