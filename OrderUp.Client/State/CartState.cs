@@ -16,6 +16,22 @@ public class CartState
         NotifyStateChanged();
     }
 
+    public void UpdateQuantity(CartItem item, int newQuantity)
+    {
+        if (newQuantity <= 0)
+        {
+            RemoveItem(item);
+            return;
+        }
+
+        var existing = _items.FirstOrDefault(i => i == item);
+        if (existing is not null)
+        {
+            existing.Quantity = newQuantity;
+            NotifyStateChanged();
+        }
+    }
+
     public void RemoveItem(CartItem item)
     {
         _items.Remove(item);
@@ -30,7 +46,9 @@ public class CartState
 
     public int ItemCount => _items.Sum(i => i.Quantity);
 
-    public decimal Total => _items.Sum(i => i.LineTotal);
+    public decimal Total() => _items.Sum(i => i.LineTotal);
+
+    public bool IsEmpty => _items.Count == 0;
 
     private void NotifyStateChanged() => OnChange?.Invoke();
 }
@@ -44,7 +62,7 @@ public class CartItem
     public required string ProductName { get; init; }
     public required int VariantId { get; init; }
     public required string VariantName { get; init; }
-    public required decimal VariantPrice { get; init; }
+    public required decimal BaseUnitPrice { get; init; }
     public int Quantity { get; set; } = 1;
     public string? Notes { get; set; }
     public List<CartItemAddon> Addons { get; init; } = [];
@@ -53,8 +71,8 @@ public class CartItem
     {
         get
         {
-            var addonTotal = Addons.Sum(a => a.Price * a.Quantity);
-            return (VariantPrice + addonTotal) * Quantity;
+            var addonTotal = Addons.Sum(a => a.UnitPrice * a.Quantity);
+            return (BaseUnitPrice + addonTotal) * Quantity;
         }
     }
 }
@@ -66,6 +84,7 @@ public class CartItemAddon
 {
     public required int AddonId { get; init; }
     public required string Name { get; init; }
-    public required decimal Price { get; init; }
+    public required string Group { get; init; }
+    public required decimal UnitPrice { get; init; }
     public int Quantity { get; set; } = 1;
 }

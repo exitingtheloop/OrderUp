@@ -253,7 +253,7 @@
             ProductName = _selectedProduct.Name,
             VariantId = variant.Id,
             VariantName = variant.Name,
-            VariantPrice = variant.Price,
+            BaseUnitPrice = variant.Price,
             Quantity = 1,
             Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes,
             Addons = _selectedAddons
@@ -265,7 +265,8 @@
                     {
                         AddonId = addon.Id,
                         Name = addon.Name,
-                        Price = addon.Price,
+                        Group = addon.Group,
+                        UnitPrice = addon.Price,
                         Quantity = kvp.Value
                     };
                 })
