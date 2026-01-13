@@ -1,0 +1,217 @@
+﻿@page "/cart"
+@using OrderUp.Client.Services
+@using OrderUp.Client.State
+@using OrderUp.Shared.Contracts.Orders.Requests
+@inject CartState CartState
+@inject OrdersApi OrdersApi
+@inject NavigationManager Navigation
+
+<PageTitle>OrderUp - Cart</PageTitle>
+
+<div class="container">
+    <h1 class="mb-4">Your Cart</h1>
+
+    @if (CartState.IsEmpty)
+    {
+        <div class="alert alert-info">
+            <p class="mb-2">Your cart is empty.</p>
+            <a href="/" class="btn btn-primary">Browse Menu</a>
+        </div>
+    }
+    else
+    {
+        @* Cart Items *@
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Items (@CartState.ItemCount)</strong>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var item in CartState.Items)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">@item.ProductName</h6>
+                                <small class="text-muted">@item.VariantName - ₱@item.BaseUnitPrice.ToString("N2")</small>
+
+                                @if (item.Addons.Count > 0)
+                                {
+                                    <div class="mt-1">
+                                        @foreach (var addon in item.Addons)
+                                        {
+                                            <span class="badge bg-secondary me-1">
+                                                @(addon.Quantity > 1 ? $"{addon.Quantity}x " : "")@addon.Name (+₱@((addon.UnitPrice * addon.Quantity).ToString("N2")))
+                                            </span>
+                                        }
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(item.Notes))
+                                {
+                                    <div class="mt-1">
+                                        <small class="text-muted fst-italic">Note: @item.Notes</small>
+                                    </div>
+                                }
+                            </div>
+                            <div class="text-end ms-3">
+                                <div class="btn-group btn-group-sm mb-1">
+                                    <button class="btn btn-outline-secondary" @onclick="() => DecreaseQuantity(item)">−</button>
+                                    <span class="btn btn-outline-secondary disabled" style="min-width: 40px;">@item.Quantity</span>
+                                    <button class="btn btn-outline-secondary" @onclick="() => IncreaseQuantity(item)">+</button>
+                                </div>
+                                <div class="fw-bold">₱@item.LineTotal.ToString("N2")</div>
+                                <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => RemoveItem(item)">Remove</button>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+            <div class="card-footer d-flex justify-content-between">
+                <span>Total</span>
+                <strong>₱@CartState.Total().ToString("N2")</strong>
+            </div>
+        </div>
+
+        @* Customer Information *@
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Your Information</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="customerName" class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text"
+                           class="form-control @(string.IsNullOrWhiteSpace(_customerName) && _submitted ? "is-invalid" : "")"
+                           id="customerName"
+                           placeholder="Enter your name"
+                           @bind="_customerName">
+                    @if (string.IsNullOrWhiteSpace(_customerName) && _submitted)
+                    {
+                        <div class="invalid-feedback">Name is required.</div>
+                    }
+                </div>
+                <div class="mb-3">
+                    <label for="customerPhone" class="form-label">Phone <span class="text-danger">*</span></label>
+                    <input type="tel"
+                           class="form-control @(string.IsNullOrWhiteSpace(_customerPhone) && _submitted ? "is-invalid" : "")"
+                           id="customerPhone"
+                           placeholder="Enter your phone number"
+                           @bind="_customerPhone">
+                    @if (string.IsNullOrWhiteSpace(_customerPhone) && _submitted)
+                    {
+                        <div class="invalid-feedback">Phone is required.</div>
+                    }
+                </div>
+                <div class="mb-3">
+                    <label for="pickupTime" class="form-label">Pickup Time (optional)</label>
+                    <input type="datetime-local"
+                           class="form-control"
+                           id="pickupTime"
+                           min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+                           @bind="_pickupTime">
+                    <div class="form-text">Leave blank for ASAP pickup.</div>
+                </div>
+            </div>
+        </div>
+
+        @* Error Message *@
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+
+        @* Actions *@
+        <div class="d-flex justify-content-between mb-4">
+            <a href="/" class="btn btn-outline-secondary">Continue Shopping</a>
+            <button class="btn btn-primary" @onclick="SubmitOrder" disabled="@_submitting">
+                @if (_submitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <span>Placing Order...</span>
+                }
+                else
+                {
+                    <span>Place Order</span>
+                }
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private string? _customerName;
+    private string? _customerPhone;
+    private DateTime? _pickupTime;
+    private bool _submitted;
+    private bool _submitting;
+    private string? _errorMessage;
+
+    private void IncreaseQuantity(CartItem item)
+    {
+        CartState.UpdateQuantity(item, item.Quantity + 1);
+    }
+
+    private void DecreaseQuantity(CartItem item)
+    {
+        CartState.UpdateQuantity(item, item.Quantity - 1);
+    }
+
+    private void RemoveItem(CartItem item)
+    {
+        CartState.RemoveItem(item);
+    }
+
+    private async Task SubmitOrder()
+    {
+        _submitted = true;
+        _errorMessage = null;
+
+        // Validate required fields
+        if (string.IsNullOrWhiteSpace(_customerName) || string.IsNullOrWhiteSpace(_customerPhone))
+        {
+            return;
+        }
+
+        _submitting = true;
+
+        try
+        {
+            // Build the request from cart
+            var request = new CreateOrderRequest(
+                CustomerName: _customerName.Trim(),
+                CustomerPhone: _customerPhone.Trim(),
+                PickupTimeUtc: _pickupTime?.ToUniversalTime(),
+                Items: CartState.Items.Select(item => new CreateOrderItemRequest(
+                    ProductId: item.ProductId,
+                    VariantId: item.VariantId,
+                    Quantity: item.Quantity,
+                    Notes: item.Notes,
+                    Addons: item.Addons.Select(a => new CreateOrderItemAddonRequest(
+                        AddonId: a.AddonId,
+                        Quantity: a.Quantity
+                    )).ToList()
+                )).ToList()
+            );
+
+            var response = await OrdersApi.CreateOrderAsync(request);
+
+            if (response is not null)
+            {
+                CartState.Clear();
+                Navigation.NavigateTo($"/order-success/{response.OrderId}");
+            }
+            else
+            {
+                _errorMessage = "Failed to place order. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

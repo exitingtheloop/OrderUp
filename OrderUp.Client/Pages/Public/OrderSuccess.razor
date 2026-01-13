@@ -1,0 +1,128 @@
+﻿@page "/order-success/{OrderId:int}"
+@using OrderUp.Client.Services
+@using OrderUp.Shared.Contracts.Orders.Responses
+@inject OrdersApi OrdersApi
+
+<PageTitle>OrderUp - Order Confirmed</PageTitle>
+
+<div class="container">
+    @if (_loading)
+    {
+        <p><em>Loading order details...</em></p>
+    }
+    else if (_order is null)
+    {
+        <div class="alert alert-danger">
+            <h4>Order Not Found</h4>
+            <p>We couldn't find your order. Please check your order number.</p>
+            <a href="/" class="btn btn-primary">Return to Menu</a>
+        </div>
+    }
+    else
+    {
+        <div class="text-center mb-4">
+            <div class="display-1 text-success">✓</div>
+            <h1>Order Confirmed!</h1>
+            <p class="lead">Thank you, @_order.CustomerName!</p>
+        </div>
+
+        <div class="card mb-4 mx-auto" style="max-width: 600px;">
+            <div class="card-header d-flex justify-content-between">
+                <strong>Order #@_order.Id</strong>
+                <span class="badge bg-warning text-dark">@_order.Status</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Order placed:</small>
+                    <div>@_order.CreatedAtUtc.ToLocalTime().ToString("f")</div>
+                </div>
+
+                @if (_order.PickupTimeUtc.HasValue)
+                {
+                    <div class="mb-3">
+                        <small class="text-muted">Requested pickup:</small>
+                        <div>@_order.PickupTimeUtc.Value.ToLocalTime().ToString("f")</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <small class="text-muted">Pickup:</small>
+                        <div>ASAP</div>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <small class="text-muted">Contact:</small>
+                    <div>@_order.CustomerPhone</div>
+                </div>
+
+                <hr />
+
+                <h6>Items</h6>
+                @foreach (var item in _order.Items)
+                {
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <span>@item.Quantity x @item.ProductName (@item.VariantName)</span>
+                            @if (item.Addons.Count > 0)
+                            {
+                                <div class="small text-muted">
+                                    @foreach (var addon in item.Addons)
+                                    {
+                                        <span class="me-2">+ @(addon.Quantity > 1 ? $"{addon.Quantity}x " : "")@addon.Name</span>
+                                    }
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(item.Notes))
+                            {
+                                <div class="small text-muted fst-italic">@item.Notes</div>
+                            }
+                        </div>
+                        <div>₱@CalculateItemTotal(item).ToString("N2")</div>
+                    </div>
+                }
+
+                <hr />
+
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>Total</span>
+                    <span>₱@_order.Total.ToString("N2")</span>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <span class="badge bg-info">@_order.PaymentStatus</span>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="/" class="btn btn-primary">Place Another Order</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private OrderDto? _order;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _order = await OrdersApi.GetOrderAsync(OrderId);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private decimal CalculateItemTotal(OrderItemDto item)
+    {
+        var addonTotal = item.Addons.Sum(a => a.UnitPrice * a.Quantity);
+        return (item.BaseUnitPrice + addonTotal) * item.Quantity;
+    }
+}

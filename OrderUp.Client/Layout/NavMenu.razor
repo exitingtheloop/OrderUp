@@ -1,8 +1,12 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using OrderUp.Client.State
+@inject CartState Cart
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">OrderUp</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-   <span class="navbar-toggler-icon"></span>
+            <span class="navbar-toggler-icon"></span>
         </button>
     </div>
 </div>
@@ -14,6 +18,15 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Menu
             </NavLink>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="cart">
+                <span class="bi bi-cart-fill-nav-menu" aria-hidden="true"></span> Cart
+                @if (Cart.ItemCount > 0)
+                {
+                    <span class="badge bg-danger rounded-pill ms-1">@Cart.ItemCount</span>
+                }
+            </NavLink>
+        </div>
     </nav>
 </div>
 
@@ -22,8 +35,18 @@
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
     }
 }
