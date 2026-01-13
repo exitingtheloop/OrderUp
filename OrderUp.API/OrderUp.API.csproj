@@ -23,12 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Repositories\" />
-    <Folder Include="Services\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\OrderUp.Client\OrderUp.Client.csproj" />
+    <ProjectReference Include="..\OrderUp.Shared\OrderUp.Shared.csproj" />
   </ItemGroup>
 
 </Project>
