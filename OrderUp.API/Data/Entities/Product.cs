@@ -11,4 +11,5 @@ public class Product
 
     public ProductCategory Category { get; set; } = null!;
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
+    public ICollection<ProductAddon> ProductAddons { get; set; } = new List<ProductAddon>();
 }
