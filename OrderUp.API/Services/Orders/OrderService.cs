@@ -39,6 +39,19 @@ public class OrderService : IOrderService
             .Where(a => addonIds.Contains(a.Id))
             .ToDictionaryAsync(a => a.Id);
 
+        // Load product-addon eligibility mappings for all requested products
+        var productAddonMappings = await _context.ProductAddons
+            .Where(pa => productIds.Contains(pa.ProductId))
+            .ToListAsync();
+
+        // Build a lookup: ProductId -> Set of allowed AddonIds
+        var allowedAddonsByProduct = productAddonMappings
+            .GroupBy(pa => pa.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(pa => pa.AddonId).ToHashSet()
+            );
+
         // Validate and build order
         var order = new Order
         {
@@ -72,6 +85,9 @@ public class OrderService : IOrderService
             if (!variant.IsAvailable)
                 throw new InvalidOperationException($"Variant '{variant.Name}' is not available.");
 
+            // Get allowed addons for this product (empty set if none configured)
+            var allowedAddonIds = allowedAddonsByProduct.GetValueOrDefault(product.Id, []);
+
             var orderItem = new OrderItem
             {
                 ProductId = product.Id,
@@ -91,6 +107,10 @@ public class OrderService : IOrderService
 
                 if (!addons.TryGetValue(addonRequest.AddonId, out var addon))
                     throw new InvalidOperationException($"Addon {addonRequest.AddonId} not found.");
+
+                // Validate addon eligibility for this product
+                if (!allowedAddonIds.Contains(addon.Id))
+                    throw new InvalidOperationException($"Addon '{addon.Name}' is not allowed for product '{product.Name}'.");
 
                 if (!addon.IsAvailable)
                     throw new InvalidOperationException($"Addon '{addon.Name}' is not available.");

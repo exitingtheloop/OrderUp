@@ -26,16 +26,12 @@ public class MenuService : IMenuService
             .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.Variants.Where(v => v.IsAvailable))
+            .Include(p => p.ProductAddons)
+                .ThenInclude(pa => pa.Addon)
             .Where(p => p.IsAvailable)
             .Select(p => p.ToDto())
             .ToListAsync();
 
-        var addons = await _context.Addons
-            .AsNoTracking()
-            .Where(a => a.IsAvailable)
-            .Select(a => a.ToDto())
-            .ToListAsync();
-
-        return new MenuDto(categories, products, addons);
+        return new MenuDto(categories, products);
     }
 }

@@ -8,5 +8,6 @@ public record ProductDto(
     bool IsAvailable,
     int CategoryId,
     string CategoryName,
-    List<ProductVariantDto> Variants
+    List<ProductVariantDto> Variants,
+    List<AddonDto> AllowedAddons
 );

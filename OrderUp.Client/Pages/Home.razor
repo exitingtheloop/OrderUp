@@ -92,10 +92,10 @@
                         }
                     </div>
 
-                    @* Addons (Optional) *@
-                    @if (_menu?.Addons.Count > 0)
+                    @* Addons (Optional) - Now using product-specific allowed addons *@
+                    @if (_selectedProduct.AllowedAddons.Count > 0)
                     {
-                        var addonGroups = _menu.Addons.GroupBy(a => a.Group);
+                        var addonGroups = _selectedProduct.AllowedAddons.GroupBy(a => a.Group);
                         @foreach (var group in addonGroups)
                         {
                             <div class="mb-3">
@@ -225,7 +225,7 @@
 
     private decimal CalculateItemTotal()
     {
-        if (_selectedProduct is null || _selectedVariantId is null || _menu is null)
+        if (_selectedProduct is null || _selectedVariantId is null)
             return 0;
 
         var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
@@ -233,7 +233,7 @@
 
         foreach (var (addonId, qty) in _selectedAddons)
         {
-            var addon = _menu.Addons.First(a => a.Id == addonId);
+            var addon = _selectedProduct.AllowedAddons.First(a => a.Id == addonId);
             total += addon.Price * qty;
         }
 
@@ -242,7 +242,7 @@
 
     private void AddToCart()
     {
-        if (_selectedProduct is null || _selectedVariantId is null || _menu is null)
+        if (_selectedProduct is null || _selectedVariantId is null)
             return;
 
         var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
@@ -260,7 +260,7 @@
                 .Where(kvp => kvp.Value > 0)
                 .Select(kvp =>
                 {
-                    var addon = _menu.Addons.First(a => a.Id == kvp.Key);
+                    var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
                     return new CartItemAddon
                     {
                         AddonId = addon.Id,
