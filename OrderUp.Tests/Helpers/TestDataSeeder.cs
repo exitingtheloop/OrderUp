@@ -106,6 +106,34 @@ public static class TestDataSeeder
     }
 
     /// <summary>
+    /// Seeds addons and links them to a product via ProductAddon junction table.
+    /// Call this after seeding both the product and addons.
+    /// </summary>
+    public static void SeedProductAddons(DataContext context, int productId, params int[] addonIds)
+    {
+        foreach (var addonId in addonIds)
+        {
+            context.ProductAddons.Add(new ProductAddon
+            {
+                ProductId = productId,
+                AddonId = addonId
+            });
+        }
+        context.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seeds addons and automatically links all of them to a product.
+    /// Convenience method for tests that need a product with addons.
+    /// </summary>
+    public static (Addon extraShot, Addon oatMilk, Addon vanilla) SeedAddonsForProduct(DataContext context, int productId)
+    {
+        var (extraShot, oatMilk, vanilla) = SeedAddons(context);
+        SeedProductAddons(context, productId, extraShot.Id, oatMilk.Id, vanilla.Id);
+        return (extraShot, oatMilk, vanilla);
+    }
+
+    /// <summary>
     /// Seeds an unavailable product with variants.
     /// </summary>
     public static Product SeedUnavailableProduct(DataContext context)

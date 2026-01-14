@@ -96,7 +96,7 @@ public class OrderServiceTests
             PickupTimeUtc: null,
             Items:
             [
-                new CreateOrderItemRequest(product.Id, mediumVariant.Id, 1, null, [])
+               new CreateOrderItemRequest(product.Id, mediumVariant.Id, 1, null, [])
             ]
         );
 
@@ -160,7 +160,7 @@ public class OrderServiceTests
             [
                 new CreateOrderItemRequest(product.Id, variantId, 1, null, [])
             ]
-        );
+          );
 
         // Act
         var response = await service.CreateOrderAsync(request);
@@ -181,7 +181,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, oatMilk, _) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, oatMilk, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new OrderService(context);
         var request = new CreateOrderRequest(
@@ -195,7 +195,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 2),
                         new CreateOrderItemAddonRequest(oatMilk.Id, 1)
@@ -229,7 +229,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, _, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
         var originalPrice = extraShot.Price;
 
         var service = new OrderService(context);
@@ -244,9 +244,10 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
-                        new CreateOrderItemAddonRequest(extraShot.Id, 1)]
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
                 )
             ]
         );
@@ -280,7 +281,7 @@ public class OrderServiceTests
         var request = new CreateOrderRequest(
             CustomerName: "Total Test 1",
             CustomerPhone: "555-0005",
-             PickupTimeUtc: null,
+            PickupTimeUtc: null,
             Items:
             [
                 new CreateOrderItemRequest(product.Id, mediumVariant.Id, 2, null, [])
@@ -302,7 +303,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, oatMilk, _) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, oatMilk, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         // Medium = $4.50
         // Extra Shot x2 = $0.75 * 2 = $1.50
@@ -322,7 +323,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 2),
                         new CreateOrderItemAddonRequest(oatMilk.Id, 1)
@@ -346,7 +347,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, smallVariant, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, _, vanilla) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, _, vanilla) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         // Item 1: Small ($3.50) + Extra Shot x1 ($0.75) = $4.25, Qty 2 => $8.50
         // Item 2: Medium ($4.50) + Vanilla x2 ($0.50 * 2 = $1.00) = $5.50, Qty 1 => $5.50
@@ -364,7 +365,7 @@ public class OrderServiceTests
                     smallVariant.Id,
                     2,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 1)
                     ]
@@ -374,7 +375,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(vanilla.Id, 2)
                     ]
@@ -588,13 +589,13 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(999, 1)
                     ]
                 )
             ]
-        );
+       );
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -609,6 +610,8 @@ public class OrderServiceTests
         using var context = TestDbContextFactory.Create();
         var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
         var unavailableAddon = TestDataSeeder.SeedUnavailableAddon(context);
+        // Link the unavailable addon to the product so it passes eligibility check
+        TestDataSeeder.SeedProductAddons(context, product.Id, unavailableAddon.Id);
 
         var service = new OrderService(context);
         var request = new CreateOrderRequest(
@@ -622,12 +625,12 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons : 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(unavailableAddon.Id, 1)
                     ]
                 )
-           ]
+            ]
         );
 
         // Act & Assert
@@ -643,7 +646,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, _, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new OrderService(context);
         var request = new CreateOrderRequest(
@@ -657,7 +660,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 0)
                     ]
@@ -669,6 +672,268 @@ public class OrderServiceTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(request));
         Assert.Contains("Addon quantity must be greater than 0", exception.Message);
+    }
+
+    #endregion
+
+    #region CreateOrderAsync - Addon Eligibility Validation
+
+    [Fact]
+    public async Task CreateOrderAsync_WithIneligibleAddon_ThrowsException()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+
+        // Create addon but DON'T link it to the product
+        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+
+        var service = new OrderService(context);
+        var request = new CreateOrderRequest(
+            CustomerName: "Ineligible Addon",
+            CustomerPhone: "555-0030",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    product.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons:
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                )
+            ]
+        );
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(request));
+        Assert.Contains("not allowed for product", exception.Message);
+        Assert.Contains(extraShot.Name, exception.Message);
+        Assert.Contains(product.Name, exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_WithEligibleAddon_Succeeds()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        var (extraShot, _, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
+
+        var service = new OrderService(context);
+        var request = new CreateOrderRequest(
+            CustomerName: "Eligible Addon",
+            CustomerPhone: "555-0031",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    product.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons:
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                )
+            ]
+        );
+
+        // Act
+        var response = await service.CreateOrderAsync(request);
+
+        // Assert
+        Assert.True(response.OrderId > 0);
+        var order = await service.GetOrderAsync(response.OrderId);
+        Assert.NotNull(order);
+        Assert.Single(order.Items[0].Addons);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_DifferentProductsHaveDifferentAllowedAddons()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, coffeeProduct, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        var (_, pastryProduct) = TestDataSeeder.SeedSecondCategory(context);
+        var pastryVariant = context.ProductVariants.First(v => v.ProductId == pastryProduct.Id);
+
+        // Create addons
+        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+
+        // Link Extra Shot only to coffee, not to pastry
+        TestDataSeeder.SeedProductAddons(context, coffeeProduct.Id, extraShot.Id);
+
+        var service = new OrderService(context);
+
+        // Coffee with Extra Shot should succeed
+        var coffeeRequest = new CreateOrderRequest(
+            CustomerName: "Coffee Order",
+            CustomerPhone: "555-0032",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    coffeeProduct.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                )
+            ]
+        );
+        var coffeeResponse = await service.CreateOrderAsync(coffeeRequest);
+        Assert.True(coffeeResponse.OrderId > 0);
+
+        // Pastry with Extra Shot should fail
+        var pastryRequest = new CreateOrderRequest(
+            CustomerName: "Pastry Order",
+            CustomerPhone: "555-0033",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    pastryProduct.Id,
+                    pastryVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ] // Should fail!
+                )
+            ]
+        );
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(pastryRequest));
+        Assert.Contains("not allowed for product", exception.Message);
+        Assert.Contains(pastryProduct.Name, exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_ProductWithNoAllowedAddons_RejectsAnyAddon()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, product, _, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+
+        // Create addon but don't link to any product
+        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+
+        var service = new OrderService(context);
+        var request = new CreateOrderRequest(
+            CustomerName: "No Addons Allowed",
+            CustomerPhone: "555-0034",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    product.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                )
+            ]
+        );
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(request));
+        Assert.Contains("not allowed for product", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateOrderAsync_MultipleItemsWithDifferentAddonEligibility()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, coffeeProduct, smallVariant, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        var (_, pastryProduct) = TestDataSeeder.SeedSecondCategory(context);
+        var pastryVariant = context.ProductVariants.First(v => v.ProductId == pastryProduct.Id);
+
+        var (extraShot, oatMilk, _) = TestDataSeeder.SeedAddons(context);
+
+        // Coffee gets Extra Shot, Pastry gets nothing
+        TestDataSeeder.SeedProductAddons(context, coffeeProduct.Id, extraShot.Id, oatMilk.Id);
+
+        var service = new OrderService(context);
+
+        // Order with coffee (eligible addon) and pastry (no addon) should succeed
+        var validRequest = new CreateOrderRequest(
+            CustomerName: "Mixed Order Valid",
+            CustomerPhone: "555-0035",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    coffeeProduct.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                ),
+                new CreateOrderItemRequest(
+                    pastryProduct.Id,
+                    pastryVariant.Id,
+                    1,
+                    null,
+                    Addons: []
+                )
+            ]
+        );
+        var response = await service.CreateOrderAsync(validRequest);
+        Assert.True(response.OrderId > 0);
+
+        // Order with pastry trying to use coffee's addon should fail
+        var invalidRequest = new CreateOrderRequest(
+            CustomerName: "Mixed Order Invalid",
+            CustomerPhone: "555-0036",
+            PickupTimeUtc: null,
+            Items:
+            [
+                new CreateOrderItemRequest(
+                    coffeeProduct.Id,
+                    mediumVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ]
+                ),
+                new CreateOrderItemRequest(
+                    pastryProduct.Id,
+                    pastryVariant.Id,
+                    1,
+                    null,
+                    Addons: 
+                    [
+                        new CreateOrderItemAddonRequest(extraShot.Id, 1)
+                    ] // Should fail!
+                )
+            ]
+        );
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(invalidRequest));
+        Assert.Contains("not allowed for product", exception.Message);
+        Assert.Contains(pastryProduct.Name, exception.Message);
     }
 
     #endregion
@@ -725,7 +990,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, smallVariant, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, oatMilk, vanilla) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, oatMilk, vanilla) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new OrderService(context);
         var createRequest = new CreateOrderRequest(
@@ -739,7 +1004,7 @@ public class OrderServiceTests
                     smallVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 1)
                     ]
@@ -749,7 +1014,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     2,
                     "With ice",
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(oatMilk.Id, 1),
                         new CreateOrderItemAddonRequest(vanilla.Id, 2)
@@ -852,7 +1117,7 @@ public class OrderServiceTests
         // Arrange
         using var context = TestDbContextFactory.Create();
         var (_, product, smallVariant, mediumVariant, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        var (extraShot, _, _) = TestDataSeeder.SeedAddons(context);
+        var (extraShot, _, _) = TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new OrderService(context);
         var request = new CreateOrderRequest(
@@ -866,7 +1131,7 @@ public class OrderServiceTests
                     smallVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 1)
                     ]
@@ -876,7 +1141,7 @@ public class OrderServiceTests
                     mediumVariant.Id,
                     1,
                     null,
-                    Addons: 
+                    Addons:
                     [
                         new CreateOrderItemAddonRequest(extraShot.Id, 2)
                     ]

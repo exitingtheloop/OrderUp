@@ -211,16 +211,38 @@ public class MenuServiceTests
 
     #endregion
 
-    #region GetMenuAsync - Addons Availability Filtering
+    #region GetMenuAsync - Product AllowedAddons
 
     [Fact]
-    public async Task GetMenuAsync_ReturnsOnlyAvailableAddons()
+    public async Task GetMenuAsync_ReturnsOnlyAvailableAddons_ForProduct()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+        var (_, product, _, _, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        TestDataSeeder.SeedAddonsForProduct(context, product.Id); // 3 available addons linked to product
+        var unavailableAddon = TestDataSeeder.SeedUnavailableAddon(context);
+        // Link unavailable addon to product too
+        TestDataSeeder.SeedProductAddons(context, product.Id, unavailableAddon.Id);
+
+        var service = new MenuService(context);
+
+        // Act
+        var menu = await service.GetMenuAsync();
+
+        // Assert
+        var returnedProduct = menu.Products.First();
+        Assert.Equal(3, returnedProduct.AllowedAddons.Count);
+        Assert.All(returnedProduct.AllowedAddons, a => Assert.True(a.IsAvailable));
+        Assert.DoesNotContain(returnedProduct.AllowedAddons, a => a.Name == "Seasonal Pumpkin Spice");
+    }
+
+    [Fact]
+    public async Task GetMenuAsync_ReturnsEmptyAllowedAddons_WhenNoneLinked()
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
         TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        TestDataSeeder.SeedAddons(context); // 3 available addons
-        TestDataSeeder.SeedUnavailableAddon(context); // 1 unavailable addon
+        TestDataSeeder.SeedAddons(context); // Addons exist but not linked to product
 
         var service = new MenuService(context);
 
@@ -228,25 +250,8 @@ public class MenuServiceTests
         var menu = await service.GetMenuAsync();
 
         // Assert
-        Assert.Equal(3, menu.Addons.Count);
-        Assert.All(menu.Addons, a => Assert.True(a.IsAvailable));
-        Assert.DoesNotContain(menu.Addons, a => a.Name == "Seasonal Pumpkin Spice");
-    }
-
-    [Fact]
-    public async Task GetMenuAsync_ReturnsEmptyAddons_WhenNoneAvailable()
-    {
-        // Arrange
-        using var context = TestDbContextFactory.Create();
-        TestDataSeeder.SeedUnavailableAddon(context);
-
-        var service = new MenuService(context);
-
-        // Act
-        var menu = await service.GetMenuAsync();
-
-        // Assert
-        Assert.Empty(menu.Addons);
+        var product = menu.Products.First();
+        Assert.Empty(product.AllowedAddons);
     }
 
     #endregion
@@ -258,7 +263,8 @@ public class MenuServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        TestDataSeeder.SeedAddons(context);
+        var (_, product, _, _, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new MenuService(context);
 
@@ -266,16 +272,17 @@ public class MenuServiceTests
         var menu = await service.GetMenuAsync();
 
         // Assert
-        Assert.Equal(3, menu.Addons.Count);
+        var returnedProduct = menu.Products.First();
+        Assert.Equal(3, returnedProduct.AllowedAddons.Count);
 
-        var extraShot = menu.Addons.First(a => a.Name == "Extra Shot");
+        var extraShot = returnedProduct.AllowedAddons.First(a => a.Name == "Extra Shot");
         Assert.Equal(1, extraShot.Id);
         Assert.Equal(0.75m, extraShot.Price);
         Assert.Equal("Espresso", extraShot.Group);
         Assert.Equal(3, extraShot.MaxPerItem);
         Assert.True(extraShot.IsAvailable);
 
-        var oatMilk = menu.Addons.First(a => a.Name == "Oat Milk");
+        var oatMilk = returnedProduct.AllowedAddons.First(a => a.Name == "Oat Milk");
         Assert.Equal(0.60m, oatMilk.Price);
         Assert.Equal("Milk Alternative", oatMilk.Group);
         Assert.Equal(1, oatMilk.MaxPerItem);
@@ -286,7 +293,8 @@ public class MenuServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        TestDataSeeder.SeedAddons(context);
+        var (_, product, _, _, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        TestDataSeeder.SeedAddonsForProduct(context, product.Id);
 
         var service = new MenuService(context);
 
@@ -294,7 +302,8 @@ public class MenuServiceTests
         var menu = await service.GetMenuAsync();
 
         // Assert
-        var groups = menu.Addons.Select(a => a.Group).Distinct().ToList();
+        var returnedProduct = menu.Products.First();
+        var groups = returnedProduct.AllowedAddons.Select(a => a.Group).Distinct().ToList();
         Assert.Equal(3, groups.Count);
         Assert.Contains("Espresso", groups);
         Assert.Contains("Milk Alternative", groups);
@@ -310,9 +319,9 @@ public class MenuServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        TestDataSeeder.SeedCategoryWithProductAndVariants(context);
-        TestDataSeeder.SeedSecondCategory(context);
-        TestDataSeeder.SeedAddons(context);
+        var (_, product1, _, _, _) = TestDataSeeder.SeedCategoryWithProductAndVariants(context);
+        var (_, product2) = TestDataSeeder.SeedSecondCategory(context);
+        TestDataSeeder.SeedAddonsForProduct(context, product1.Id);
 
         var service = new MenuService(context);
 
@@ -323,11 +332,17 @@ public class MenuServiceTests
         Assert.NotNull(menu);
         Assert.NotNull(menu.Categories);
         Assert.NotNull(menu.Products);
-        Assert.NotNull(menu.Addons);
 
         Assert.Equal(2, menu.Categories.Count);
         Assert.Equal(2, menu.Products.Count);
-        Assert.Equal(3, menu.Addons.Count);
+
+        // First product has addons
+        var coffeeProduct = menu.Products.First(p => p.Name == "Latte");
+        Assert.Equal(3, coffeeProduct.AllowedAddons.Count);
+
+        // Second product has no addons linked
+        var pastryProduct = menu.Products.First(p => p.Name == "Croissant");
+        Assert.Empty(pastryProduct.AllowedAddons);
     }
 
     [Fact]
@@ -344,7 +359,6 @@ public class MenuServiceTests
         Assert.NotNull(menu);
         Assert.Empty(menu.Categories);
         Assert.Empty(menu.Products);
-        Assert.Empty(menu.Addons);
     }
 
     #endregion
@@ -457,16 +471,19 @@ public class MenuServiceTests
     {
         // Arrange
         using var context = TestDbContextFactory.Create();
-        var addon = new Addon
-        {
-            Id = 1,
-            Name = "Whipped Cream",
-            Price = 0.50m,
-            Group = "Toppings",
-            MaxPerItem = null,
-            IsAvailable = true
-        };
+        var category = new ProductCategory { Id = 1, Name = "Coffee", DisplayOrder = 1 };
+        context.ProductCategories.Add(category);
+
+        var product = new Product { Id = 1, CategoryId = 1, Name = "Latte", IsAvailable = true };
+        context.Products.Add(product);
+
+        var variant = new ProductVariant { Id = 1, ProductId = 1, Name = "Regular", Price = 4.00m, IsAvailable = true };
+        context.ProductVariants.Add(variant);
+
+        var addon = new Addon { Id = 1, Name = "Whipped Cream", Price = 0.50m, Group = "Toppings", MaxPerItem = null, IsAvailable = true };
         context.Addons.Add(addon);
+
+        context.ProductAddons.Add(new ProductAddon { ProductId = 1, AddonId = 1 });
         await context.SaveChangesAsync();
 
         var service = new MenuService(context);
@@ -475,8 +492,9 @@ public class MenuServiceTests
         var menu = await service.GetMenuAsync();
 
         // Assert
-        Assert.Single(menu.Addons);
-        Assert.Null(menu.Addons[0].MaxPerItem);
+        var returnedProduct = menu.Products.First();
+        Assert.Single(returnedProduct.AllowedAddons);
+        Assert.Null(returnedProduct.AllowedAddons[0].MaxPerItem);
     }
 
     [Fact]
@@ -512,6 +530,12 @@ public class MenuServiceTests
             new Addon { Id = 2, Name = "Old Syrup", Price = 0.50m, Group = "Syrups", IsAvailable = false }
         );
 
+        // Link both addons to Latte
+        context.ProductAddons.AddRange(
+            new ProductAddon { ProductId = 1, AddonId = 1 },
+            new ProductAddon { ProductId = 1, AddonId = 2 }
+        );
+
         await context.SaveChangesAsync();
 
         var service = new MenuService(context);
@@ -522,11 +546,91 @@ public class MenuServiceTests
         // Assert
         Assert.Equal(2, menu.Categories.Count); // All categories shown
         Assert.Equal(2, menu.Products.Count); // Only available products
-        Assert.Single(menu.Addons); // Only available addons
 
         var latte = menu.Products.First(p => p.Name == "Latte");
         Assert.Single(latte.Variants); // Only available variants
         Assert.Equal("Small", latte.Variants[0].Name);
+        Assert.Single(latte.AllowedAddons); // Only available addons
+        Assert.Equal("Honey", latte.AllowedAddons[0].Name);
+    }
+
+    [Fact]
+    public async Task GetMenuAsync_DifferentProductsHaveDifferentAddons()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+
+        var category = new ProductCategory { Id = 1, Name = "Coffee", DisplayOrder = 1 };
+        context.ProductCategories.Add(category);
+
+        var latte = new Product { Id = 1, CategoryId = 1, Name = "Latte", IsAvailable = true };
+        var americano = new Product { Id = 2, CategoryId = 1, Name = "Americano", IsAvailable = true };
+        context.Products.AddRange(latte, americano);
+
+        context.ProductVariants.AddRange(
+            new ProductVariant { Id = 1, ProductId = 1, Name = "Regular", Price = 4.00m, IsAvailable = true },
+            new ProductVariant { Id = 2, ProductId = 2, Name = "Regular", Price = 3.00m, IsAvailable = true }
+        );
+
+        var extraShot = new Addon { Id = 1, Name = "Extra Shot", Price = 0.75m, Group = "Espresso", IsAvailable = true };
+        var oatMilk = new Addon { Id = 2, Name = "Oat Milk", Price = 0.60m, Group = "Milk", IsAvailable = true };
+        context.Addons.AddRange(extraShot, oatMilk);
+
+        // Latte gets both addons
+        context.ProductAddons.Add(new ProductAddon { ProductId = 1, AddonId = 1 });
+        context.ProductAddons.Add(new ProductAddon { ProductId = 1, AddonId = 2 });
+
+        // Americano gets only extra shot
+        context.ProductAddons.Add(new ProductAddon { ProductId = 2, AddonId = 1 });
+
+        await context.SaveChangesAsync();
+
+        var service = new MenuService(context);
+
+        // Act
+        var menu = await service.GetMenuAsync();
+
+        // Assert
+        var latteProduct = menu.Products.First(p => p.Name == "Latte");
+        var americanoProduct = menu.Products.First(p => p.Name == "Americano");
+
+        Assert.Equal(2, latteProduct.AllowedAddons.Count);
+        Assert.Single(americanoProduct.AllowedAddons);
+        Assert.Equal("Extra Shot", americanoProduct.AllowedAddons[0].Name);
+    }
+
+    [Fact]
+    public async Task GetMenuAsync_RespectsMaxPerItemOverride()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.Create();
+
+        var category = new ProductCategory { Id = 1, Name = "Coffee", DisplayOrder = 1 };
+        context.ProductCategories.Add(category);
+
+        var product = new Product { Id = 1, CategoryId = 1, Name = "Latte", IsAvailable = true };
+        context.Products.Add(product);
+
+        var variant = new ProductVariant { Id = 1, ProductId = 1, Name = "Regular", Price = 4.00m, IsAvailable = true };
+        context.ProductVariants.Add(variant);
+
+        var addon = new Addon { Id = 1, Name = "Extra Shot", Price = 0.75m, Group = "Espresso", MaxPerItem = 5, IsAvailable = true };
+        context.Addons.Add(addon);
+
+        // Override MaxPerItem for this product-addon combination
+        context.ProductAddons.Add(new ProductAddon { ProductId = 1, AddonId = 1, MaxPerItemOverride = 2 });
+
+        await context.SaveChangesAsync();
+
+        var service = new MenuService(context);
+
+        // Act
+        var menu = await service.GetMenuAsync();
+
+        // Assert
+        var returnedProduct = menu.Products.First();
+        Assert.Single(returnedProduct.AllowedAddons);
+        Assert.Equal(2, returnedProduct.AllowedAddons[0].MaxPerItem); // Uses override, not default 5
     }
 
     #endregion
