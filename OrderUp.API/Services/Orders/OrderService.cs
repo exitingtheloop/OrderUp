@@ -18,6 +18,10 @@ public class OrderService : IOrderService
 
     public async Task<CreateOrderResponse> CreateOrderAsync(CreateOrderRequest request)
     {
+        // Validate request has items
+        if (request.Items.Count == 0)
+            throw new InvalidOperationException("Order must contain at least one item.");
+
         // Load all required products, variants, and addons for validation
         var productIds = request.Items.Select(i => i.ProductId).Distinct().ToList();
         var variantIds = request.Items.Select(i => i.VariantId).Distinct().ToList();
