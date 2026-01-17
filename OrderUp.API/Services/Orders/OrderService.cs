@@ -73,9 +73,9 @@ public class OrderService : IOrderService
             if (itemRequest.Quantity <= 0) throw new InvalidOperationException($"Item quantity must be greater than 0.");
 
             // Validate product
-            if (!products.TryGetValue(itemRequest.ProductId, out var product)) 
+            if (!products.TryGetValue(itemRequest.ProductId, out var product))
                 throw new InvalidOperationException($"Product {itemRequest.ProductId} not found.");
- 
+
             if (!product.IsAvailable)
                 throw new InvalidOperationException($"Product '{product.Name}' is not available.");
 
@@ -146,5 +146,37 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(o => o.Id == id);
 
         return order?.ToDto();
+    }
+
+    public async Task<List<OrderDto>> GetTodaysOrdersAsync()
+    {
+        var todayUtc = DateTime.UtcNow.Date;
+        var tomorrowUtc = todayUtc.AddDays(1);
+
+        var orders = await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Items)
+            .ThenInclude(i => i.Addons)
+            .Where(o => o.CreatedAtUtc >= todayUtc && o.CreatedAtUtc < tomorrowUtc)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToListAsync();
+
+        return orders.Select(o => o.ToDto()).ToList();
+    }
+
+    public async Task<OrderDto?> UpdateOrderStatusAsync(int id, UpdateOrderStatusRequest request)
+    {
+        var order = await _context.Orders
+            .Include(o => o.Items)
+            .ThenInclude(i => i.Addons)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order is null)
+            return null;
+
+        order.Status = (OrderStatus)request.Status;
+        await _context.SaveChangesAsync();
+
+        return order.ToDto();
     }
 }

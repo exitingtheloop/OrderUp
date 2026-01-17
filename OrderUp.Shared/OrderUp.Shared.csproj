@@ -10,7 +10,6 @@
     <Folder Include="Contracts\Menu\Responses\" />
     <Folder Include="Contracts\Menu\Requests\" />
     <Folder Include="Contracts\Orders\Responses\" />
-    <Folder Include="Contracts\Orders\Requests\" />
     <Folder Include="Contracts\Webhooks\" />
     <Folder Include="Contracts\Payments\" />
     <Folder Include="Enums\" />
