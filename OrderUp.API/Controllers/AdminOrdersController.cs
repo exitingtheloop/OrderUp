@@ -35,11 +35,18 @@ public class AdminOrdersController : ControllerBase
     [HttpPatch("{id:int}/status")]
     public async Task<ActionResult<OrderDto>> UpdateOrderStatus(int id, UpdateOrderStatusRequest request)
     {
-        var order = await _orderService.UpdateOrderStatusAsync(id, request);
+        try
+        {
+            var order = await _orderService.UpdateOrderStatusAsync(id, request);
 
-        if (order is null)
-            return NotFound(new { error = $"Order {id} not found." });
+            if (order is null)
+                return NotFound(new { error = $"Order {id} not found." });
 
-        return Ok(order);
+            return Ok(order);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }

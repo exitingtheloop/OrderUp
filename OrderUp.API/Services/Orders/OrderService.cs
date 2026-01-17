@@ -174,6 +174,10 @@ public class OrderService : IOrderService
         if (order is null)
             return null;
 
+        // Validate status transition
+        var currentStatus = (Shared.Enums.OrderStatus)order.Status;
+        OrderStatusRules.ValidateTransition(currentStatus, request.Status);
+
         order.Status = (OrderStatus)request.Status;
         await _context.SaveChangesAsync();
 
