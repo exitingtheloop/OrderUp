@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using OrderUp.API.Data;
 using OrderUp.API.Data.Seed;
+using OrderUp.API.Services.Admin;
 using OrderUp.API.Services.Menu;
 using OrderUp.API.Services.Orders;
 using Swashbuckle.AspNetCore.Filters;
@@ -56,6 +57,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IAdminMenuService, AdminMenuService>();
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
