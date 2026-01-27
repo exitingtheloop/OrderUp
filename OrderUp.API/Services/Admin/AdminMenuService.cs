@@ -263,4 +263,80 @@ public class AdminMenuService : IAdminMenuService
     }
 
     #endregion
+
+    #region Addons
+
+    public async Task<List<AddonDto>> GetAllAddonsAsync()
+    {
+        var addons = await _context.Addons
+            .AsNoTracking()
+            .OrderBy(a => a.Group)
+            .ThenBy(a => a.Name)
+            .ToListAsync();
+
+        return addons.Select(a => a.ToDto()).ToList();
+    }
+
+    public async Task<AddonDto?> GetAddonAsync(int id)
+    {
+        var addon = await _context.Addons
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        return addon?.ToDto();
+    }
+
+    public async Task<AddonDto> CreateAddonAsync(CreateAddonRequest request)
+    {
+        var addon = new Addon
+        {
+            Name = request.Name,
+            Price = request.Price,
+            Group = request.Group,
+            MaxPerItem = request.MaxPerItem,
+            IsAvailable = request.IsAvailable
+        };
+
+        _context.Addons.Add(addon);
+        await _context.SaveChangesAsync();
+
+        return addon.ToDto();
+    }
+
+    public async Task<AddonDto?> UpdateAddonAsync(int id, UpdateAddonRequest request)
+    {
+        var addon = await _context.Addons.FindAsync(id);
+
+        if (addon is null)
+            return null;
+
+        addon.Name = request.Name;
+        addon.Price = request.Price;
+        addon.Group = request.Group;
+        addon.MaxPerItem = request.MaxPerItem;
+        addon.IsAvailable = request.IsAvailable;
+
+        await _context.SaveChangesAsync();
+
+        return addon.ToDto();
+    }
+
+    public async Task<bool> DeleteAddonAsync(int id)
+    {
+        var addon = await _context.Addons.FindAsync(id);
+
+        if (addon is null)
+            return false;
+
+        // Check for order references
+        var hasOrders = await _context.OrderItemAddons.AnyAsync(oia => oia.AddonId == id);
+        if (hasOrders)
+            throw new InvalidOperationException($"Cannot delete addon '{addon.Name}' because it has associated orders.");
+
+        _context.Addons.Remove(addon);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    #endregion
 }

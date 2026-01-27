@@ -20,4 +20,11 @@ public interface IAdminMenuService
 
     // Product Addons (allowed addons mapping)
     Task<ProductDto?> UpdateProductAddonsAsync(int productId, UpdateProductAddonsRequest request);
+
+    // Addons
+    Task<List<AddonDto>> GetAllAddonsAsync();
+    Task<AddonDto?> GetAddonAsync(int id);
+    Task<AddonDto> CreateAddonAsync(CreateAddonRequest request);
+    Task<AddonDto?> UpdateAddonAsync(int id, UpdateAddonRequest request);
+    Task<bool> DeleteAddonAsync(int id);
 }
