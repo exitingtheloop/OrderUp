@@ -1,0 +1,351 @@
+@page "/admin/addons"
+@using OrderUp.Client.Services
+@using OrderUp.Shared.Contracts.Menu.Requests
+@using OrderUp.Shared.Contracts.Menu.Responses
+@inject AdminApi AdminApi
+
+<PageTitle>Admin - Addons</PageTitle>
+
+<h1>Addons</h1>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+@if (successMessage is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+@if (isLoading)
+{
+    <p><em>Loading addons...</em></p>
+}
+else
+{
+    <div class="mb-3">
+        <button class="btn btn-primary" @onclick="ShowCreateAddonModal">
+            <i class="bi bi-plus"></i> Add Addon
+        </button>
+    </div>
+
+    @foreach (var group in addons.GroupBy(a => a.Group).OrderBy(g => g.Key))
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>@group.Key</strong>
+                <span class="badge bg-secondary ms-2">@group.Count() addons</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Price</th>
+                            <th>Max Per Item</th>
+                            <th>Available</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var addon in group)
+                        {
+                            <tr class="@(addon.IsAvailable ? "" : "table-secondary")">
+                                <td>@addon.Name</td>
+                                <td>?@addon.Price.ToString("N2")</td>
+                                <td>@(addon.MaxPerItem?.ToString() ?? "Unlimited")</td>
+                                <td>
+                                    @if (addon.IsAvailable)
+                                    {
+                                        <span class="badge bg-success">Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" @onclick="() => ShowEditAddonModal(addon)">
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteAddon(addon)">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (addons.Count == 0)
+    {
+        <div class="alert alert-info">No addons yet. Create your first addon!</div>
+    }
+}
+
+@* Addon Create/Edit Modal *@
+@if (showAddonModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingAddon is null ? "Add Addon" : "Edit Addon")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAddonModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" @bind="addonForm.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price (?)</label>
+                        <input type="number" step="0.01" class="form-control" @bind="addonForm.Price" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Group</label>
+                        <input type="text" class="form-control" @bind="addonForm.Group" list="groupSuggestions" />
+                        <datalist id="groupSuggestions">
+                            @foreach (var group in existingGroups)
+                            {
+                                <option value="@group" />
+                            }
+                        </datalist>
+                        <small class="text-muted">e.g., Espresso, Milk Alternative, Syrups</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Per Item (leave empty for unlimited)</label>
+                        <input type="number" class="form-control" @bind="addonForm.MaxPerItem" min="1" />
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="addonAvailable" @bind="addonForm.IsAvailable" />
+                        <label class="form-check-label" for="addonAvailable">Available</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddonModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveAddon" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteModal && addonToDelete is not null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong>@addonToDelete.Name</strong>?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteAddon" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AddonDto> addons = [];
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Addon Modal
+    private bool showAddonModal = false;
+    private AddonDto? editingAddon;
+    private AddonFormModel addonForm = new();
+
+    // Delete Modal
+    private bool showDeleteModal = false;
+    private AddonDto? addonToDelete;
+
+    private IEnumerable<string> existingGroups => addons.Select(a => a.Group).Distinct().OrderBy(g => g);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAddons();
+    }
+
+    private async Task LoadAddons()
+    {
+        isLoading = true;
+        try
+        {
+            addons = await AdminApi.GetAllAddonsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load addons: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateAddonModal()
+    {
+        editingAddon = null;
+        addonForm = new AddonFormModel { IsAvailable = true };
+        showAddonModal = true;
+    }
+
+    private void ShowEditAddonModal(AddonDto addon)
+    {
+        editingAddon = addon;
+        addonForm = new AddonFormModel
+        {
+            Name = addon.Name,
+            Price = addon.Price,
+            Group = addon.Group,
+            MaxPerItem = addon.MaxPerItem,
+            IsAvailable = addon.IsAvailable
+        };
+        showAddonModal = true;
+    }
+
+    private void CloseAddonModal()
+    {
+        showAddonModal = false;
+        editingAddon = null;
+    }
+
+    private async Task SaveAddon()
+    {
+        if (string.IsNullOrWhiteSpace(addonForm.Name))
+        {
+            errorMessage = "Addon name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(addonForm.Group))
+        {
+            errorMessage = "Addon group is required.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            if (editingAddon is null)
+            {
+                var request = new CreateAddonRequest(
+                    addonForm.Name,
+                    addonForm.Price,
+                    addonForm.Group,
+                    addonForm.MaxPerItem,
+                    addonForm.IsAvailable
+                );
+                await AdminApi.CreateAddonAsync(request);
+                successMessage = "Addon created successfully.";
+            }
+            else
+            {
+                var request = new UpdateAddonRequest(
+                    addonForm.Name,
+                    addonForm.Price,
+                    addonForm.Group,
+                    addonForm.MaxPerItem,
+                    addonForm.IsAvailable
+                );
+                await AdminApi.UpdateAddonAsync(editingAddon.Id, request);
+                successMessage = "Addon updated successfully.";
+            }
+
+            CloseAddonModal();
+            await LoadAddons();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to save addon: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ConfirmDeleteAddon(AddonDto addon)
+    {
+        addonToDelete = addon;
+        showDeleteModal = true;
+    }
+
+    private async Task DeleteAddon()
+    {
+        if (addonToDelete is null) return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await AdminApi.DeleteAddonAsync(addonToDelete.Id);
+            if (success)
+            {
+                successMessage = $"Addon '{addonToDelete.Name}' deleted.";
+                await LoadAddons();
+            }
+            else
+            {
+                errorMessage = "Failed to delete addon. It may have associated orders.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete addon: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            showDeleteModal = false;
+            addonToDelete = null;
+        }
+    }
+
+    private class AddonFormModel
+    {
+        public string Name { get; set; } = "";
+        public decimal Price { get; set; }
+        public string Group { get; set; } = "";
+        public int? MaxPerItem { get; set; }
+        public bool IsAvailable { get; set; }
+    }
+}

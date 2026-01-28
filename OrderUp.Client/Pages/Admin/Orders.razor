@@ -1,0 +1,219 @@
+@page "/admin/orders"
+@using OrderUp.Client.Services
+@using OrderUp.Shared.Contracts.Orders.Responses
+@using OrderUp.Shared.Contracts.Orders.Requests
+@using OrderUp.Shared.Enums
+@inject AdminApi AdminApi
+
+<PageTitle>Admin - Orders</PageTitle>
+
+<h1>Today's Orders</h1>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+@if (isLoading)
+{
+    <p><em>Loading orders...</em></p>
+}
+else if (orders.Count == 0)
+{
+    <div class="alert alert-info">No orders today.</div>
+}
+else
+{
+    <div class="mb-3">
+        <strong>Total Orders:</strong> @orders.Count |
+        <strong>Pending:</strong> @orders.Count(o => o.Status == OrderStatus.Pending) |
+        <strong>In Progress:</strong> @orders.Count(o => o.Status == OrderStatus.Confirmed || o.Status == OrderStatus.Preparing) |
+        <strong>Ready:</strong> @orders.Count(o => o.Status == OrderStatus.Ready)
+    </div>
+
+    <div class="row">
+        @foreach (var order in orders.OrderByDescending(o => o.CreatedAtUtc))
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card @GetOrderCardClass(order.Status)">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Order #@order.Id</strong>
+                        <span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Customer:</strong> @order.CustomerName</p>
+                        <p class="mb-1"><strong>Phone:</strong> @order.CustomerPhone</p>
+                        <p class="mb-1"><strong>Time:</strong> @order.CreatedAtUtc.ToLocalTime().ToString("h:mm tt")</p>
+                        @if (order.PickupTimeUtc.HasValue)
+                        {
+                            <p class="mb-1"><strong>Pickup:</strong> @order.PickupTimeUtc.Value.ToLocalTime().ToString("h:mm tt")</p>
+                        }
+                        <p class="mb-2"><strong>Total:</strong> ?@order.Total.ToString("N2")</p>
+
+                        <hr />
+
+                        <h6>Items:</h6>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var item in order.Items)
+                            {
+                                <li class="mb-2">
+                                    <strong>@item.Quantity x @item.ProductName (@item.VariantName)</strong>
+                                    @if (!string.IsNullOrEmpty(item.Notes))
+                                    {
+                                        <br />
+                        
+                                        <small class="text-muted">Note: @item.Notes</small>
+                                    }
+                                    @if (item.Addons.Any())
+                                    {
+                                        <ul class="small mb-0">
+                                            @foreach (var addon in item.Addons)
+                                            {
+                                                <li>+ @addon.Quantity x @addon.Name</li>
+                                            }
+                                        </ul>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        @if (order.Status != OrderStatus.Completed && order.Status != OrderStatus.Cancelled)
+                        {
+                            <div class="d-flex gap-2 flex-wrap">
+                                @foreach (var nextStatus in GetAllowedTransitions(order.Status))
+                                {
+                                    <button class="btn btn-sm @GetStatusButtonClass(nextStatus)"
+                                            @onclick="() => UpdateOrderStatus(order.Id, nextStatus)"
+                                            disabled="@updatingOrderId.HasValue">
+                                        @if (updatingOrderId == order.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                        }
+                                        @nextStatus
+                                    </button>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-muted">@(order.Status == OrderStatus.Completed ? "? Completed" : "? Cancelled")</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-3">
+    <button class="btn btn-outline-primary" @onclick="LoadOrders" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+        }
+        Refresh
+    </button>
+</div>
+
+@code {
+    private List<OrderDto> orders = [];
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int? updatingOrderId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            orders = await AdminApi.GetTodaysOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load orders: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task UpdateOrderStatus(int orderId, OrderStatus newStatus)
+    {
+        updatingOrderId = orderId;
+        errorMessage = null;
+
+        try
+        {
+            var updated = await AdminApi.UpdateOrderStatusAsync(orderId, new UpdateOrderStatusRequest(newStatus));
+            if (updated is not null)
+            {
+                var index = orders.FindIndex(o => o.Id == orderId);
+                if (index >= 0)
+                {
+                    orders[index] = updated;
+                }
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Failed to update order: {ex.Message}";
+        }
+        finally
+        {
+            updatingOrderId = null;
+        }
+    }
+
+    private static OrderStatus[] GetAllowedTransitions(OrderStatus current) => current switch
+    {
+        OrderStatus.Pending => [OrderStatus.Confirmed, OrderStatus.Cancelled],
+        OrderStatus.Confirmed => [OrderStatus.Preparing, OrderStatus.Cancelled],
+        OrderStatus.Preparing => [OrderStatus.Ready, OrderStatus.Cancelled],
+        OrderStatus.Ready => [OrderStatus.Completed],
+        _ => []
+    };
+
+    private static string GetOrderCardClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "border-warning",
+        OrderStatus.Confirmed => "border-info",
+        OrderStatus.Preparing => "border-primary",
+        OrderStatus.Ready => "border-success",
+        OrderStatus.Completed => "border-secondary",
+        OrderStatus.Cancelled => "border-danger",
+        _ => ""
+    };
+
+    private static string GetStatusBadgeClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "bg-warning text-dark",
+        OrderStatus.Confirmed => "bg-info",
+        OrderStatus.Preparing => "bg-primary",
+        OrderStatus.Ready => "bg-success",
+        OrderStatus.Completed => "bg-secondary",
+        OrderStatus.Cancelled => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private static string GetStatusButtonClass(OrderStatus status) => status switch
+    {
+        OrderStatus.Confirmed => "btn-info",
+        OrderStatus.Preparing => "btn-primary",
+        OrderStatus.Ready => "btn-success",
+        OrderStatus.Completed => "btn-secondary",
+        OrderStatus.Cancelled => "btn-outline-danger",
+        _ => "btn-secondary"
+    };
+}

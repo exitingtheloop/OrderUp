@@ -12,6 +12,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<MenuApi>();
 builder.Services.AddScoped<OrdersApi>();
+builder.Services.AddScoped<AdminApi>();
 builder.Services.AddScoped<CartState>();
 
 await builder.Build().RunAsync();
