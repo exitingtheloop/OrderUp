@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderUp.Client", "OrderUp.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderUp.Tests", "OrderUp.Tests\OrderUp.Tests.csproj", "{D979ACE9-F7A7-4918-9BC6-19EE545D8E9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderUp.IntegrationTests", "OrderUp.IntegrationTests\OrderUp.IntegrationTests.csproj", "{F2C674E4-77B2-F382-55E7-B0EDA270F34D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{D979ACE9-F7A7-4918-9BC6-19EE545D8E9D}.Release|x64.Build.0 = Release|Any CPU
 		{D979ACE9-F7A7-4918-9BC6-19EE545D8E9D}.Release|x86.ActiveCfg = Release|Any CPU
 		{D979ACE9-F7A7-4918-9BC6-19EE545D8E9D}.Release|x86.Build.0 = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|x64.Build.0 = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Debug|x86.Build.0 = Debug|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|x64.ActiveCfg = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|x64.Build.0 = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|x86.ActiveCfg = Release|Any CPU
+		{F2C674E4-77B2-F382-55E7-B0EDA270F34D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
