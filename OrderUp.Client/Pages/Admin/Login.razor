@@ -1,0 +1,111 @@
+@page "/admin/login"
+@using OrderUp.Client.State
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Admin Login</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Admin Login</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
+                        <ValidationMessage For="@(() => loginModel.Email)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox id="rememberMe" class="form-check-input" @bind-Value="loginModel.RememberMe" />
+                        <label for="rememberMe" class="form-check-label">Remember me</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" disabled="@isLoggingIn">
+                        @if (isLoggingIn)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Login
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+
+        <div class="mt-3 text-center">
+            <a href="/" class="text-muted">? Back to Menu</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool isLoggingIn = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+
+        // If already authenticated as admin, redirect to orders
+        if (AuthState.IsAdmin)
+        {
+            Navigation.NavigateTo("/admin/orders");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoggingIn = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthState.LoginAsync(
+                loginModel.Email,
+                loginModel.Password,
+                loginModel.RememberMe);
+
+            if (result.Success)
+            {
+                // Redirect to admin orders on successful login
+                Navigation.NavigateTo("/admin/orders");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage ?? "Login failed.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoggingIn = false;
+        }
+    }
+
+    private class LoginModel
+    {
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool RememberMe { get; set; } = false;
+    }
+}

@@ -1,328 +1,327 @@
 @page "/admin/products"
 @using OrderUp.Client.Services
+@using OrderUp.Client.State
 @using OrderUp.Shared.Contracts.Menu.Requests
 @using OrderUp.Shared.Contracts.Menu.Responses
 @inject AdminApi AdminApi
+@inject AuthState AuthState
+@inject NavigationManager Navigation
 
 <PageTitle>Admin - Products</PageTitle>
 
-<h1>Products</h1>
-
-@if (errorMessage is not null)
+@if (!isAuthorized)
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @errorMessage
-        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-    </div>
-}
-
-@if (successMessage is not null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @successMessage
-        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-    </div>
-}
-
-@if (isLoading)
-{
-    <p><em>Loading products...</em></p>
+    <p><em>Checking authorization...</em></p>
 }
 else
 {
-    <div class="mb-3">
-        <button class="btn btn-primary" @onclick="ShowCreateProductModal">
-            <i class="bi bi-plus"></i> Add Product
-        </button>
-    </div>
+    <h1>Products</h1>
 
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Variants</th>
-                    <th>Addons</th>
-                    <th>Available</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var product in products)
-                {
-                    <tr class="@(product.IsAvailable ? "" : "table-secondary")">
-                        <td>
-                            <strong>@product.Name</strong>
-                            @if (!string.IsNullOrEmpty(product.Description))
-                            {
-                                <br />
-                    
-                                <small class="text-muted">@product.Description</small>
-                            }
-                        </td>
-                        <td>@product.CategoryName</td>
-                        <td>
-                            @foreach (var variant in product.Variants)
-                            {
-                                <span class="badge @(variant.IsAvailable ? "bg-secondary" : "bg-light text-dark") me-1">
-                                    @variant.Name - ?@variant.Price.ToString("N2")
-                                    @(variant.IsDefault ? " ?" : "")
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            <span class="badge bg-info">@product.AllowedAddons.Count addons</span>
-                        </td>
-                        <td>
-                            @if (product.IsAvailable)
-                            {
-                                <span class="badge bg-success">Yes</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-danger">No</span>
-                            }
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" @onclick="() => ShowEditProductModal(product)">
-                                    Edit
-                                </button>
-                                <button class="btn btn-outline-info" @onclick="() => ShowManageVariantsModal(product)">
-                                    Variants
-                                </button>
-                                <button class="btn btn-outline-secondary" @onclick="() => ShowManageAddonsModal(product)">
-                                    Addons
-                                </button>
-                                <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteProduct(product)">
-                                    Delete
-                                </button>
-                            </div>
-                        </td>
+    @if (errorMessage is not null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (successMessage is not null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <p><em>Loading products...</em></p>
+    }
+    else
+    {
+        <div class="mb-3">
+            <button class="btn btn-primary" @onclick="ShowCreateProductModal">
+                <i class="bi bi-plus"></i> Add Product
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Variants</th>
+                        <th>Addons</th>
+                        <th>Available</th>
+                        <th>Actions</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-
-@* Product Create/Edit Modal *@
-@if (showProductModal)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(editingProduct is null ? "Add Product" : "Edit Product")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseProductModal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" class="form-control" @bind="productForm.Name" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" @bind="productForm.Description" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Category</label>
-                        <select class="form-select" @bind="productForm.CategoryId">
-                            @foreach (var category in categories)
-                            {
-                                <option value="@category.Id">@category.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Image URL</label>
-                        <input type="text" class="form-control" @bind="productForm.ImageUrl" />
-                    </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" class="form-check-input" id="productAvailable" @bind="productForm.IsAvailable" />
-                        <label class="form-check-label" for="productAvailable">Available</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseProductModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveProduct" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        Save
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@* Manage Variants Modal *@
-@if (showVariantsModal && editingProduct is not null)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Variants - @editingProduct.Name</h5>
-                    <button type="button" class="btn-close" @onclick="CloseVariantsModal"></button>
-                </div>
-                <div class="modal-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Price</th>
-                                <th>Default</th>
-                                <th>Available</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var variant in editingProduct.Variants)
-                            {
-                                <tr>
-                                    <td>@variant.Name</td>
-                                    <td>?@variant.Price.ToString("N2")</td>
-                                    <td>@(variant.IsDefault ? "?" : "")</td>
-                                    <td>@(variant.IsAvailable ? "Yes" : "No")</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditVariantForm(variant)">Edit</button>
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteVariant(variant.Id)">Delete</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-
-                    <hr />
-
-                    <h6>@(editingVariant is null ? "Add Variant" : "Edit Variant")</h6>
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" placeholder="Name" @bind="variantForm.Name" />
-                        </div>
-                        <div class="col-md-2">
-                            <input type="number" step="0.01" class="form-control form-control-sm" placeholder="Price" @bind="variantForm.Price" />
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="variantDefault" @bind="variantForm.IsDefault" />
-                                <label class="form-check-label" for="variantDefault">Default</label>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="variantAvailable" @bind="variantForm.IsAvailable" />
-                                <label class="form-check-label" for="variantAvailable">Available</label>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-sm btn-primary" @onclick="SaveVariant" disabled="@isSaving">
-                                @(editingVariant is null ? "Add" : "Update")
-                            </button>
-                            @if (editingVariant is not null)
-                            {
-                                <button class="btn btn-sm btn-secondary" @onclick="CancelEditVariant">Cancel</button>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseVariantsModal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@* Manage Allowed Addons Modal *@
-@if (showAddonsModal && editingProduct is not null)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Allowed Addons - @editingProduct.Name</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAddonsModal"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="text-muted">Select which addons can be added to this product:</p>
-
-                    @if (allAddons.Count == 0)
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
                     {
-                        <div class="alert alert-info">No addons available. Create addons first.</div>
-                    }
-                    else
-                    {
-                        @foreach (var group in allAddons.GroupBy(a => a.Group).OrderBy(g => g.Key))
-                        {
-                            <div class="mb-3">
-                                <strong>@group.Key</strong>
-                                @foreach (var addon in group)
+                        <tr class="@(product.IsAvailable ? "" : "table-secondary")">
+                            <td>
+                                <strong>@product.Name</strong>
+                                @if (!string.IsNullOrEmpty(product.Description))
                                 {
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input"
-                                               id="addon-@addon.Id"
-                                               checked="@selectedAddonIds.Contains(addon.Id)"
-                                               @onchange="e => ToggleAddon(addon.Id, (bool)e.Value!)" />
-                                        <label class="form-check-label" for="addon-@addon.Id">
-                                            @addon.Name (?@addon.Price.ToString("N2"))
-                                            @if (!addon.IsAvailable)
-                                            {
-                                                <span class="badge bg-warning text-dark ms-1">Unavailable</span>
-                                            }
-                                        </label>
-                                    </div>
+                                    <br />
+                    
+                                    <small class="text-muted">@product.Description</small>
+                                }
+                            </td>
+                            <td>@product.CategoryName</td>
+                            <td>
+                                @foreach (var variant in product.Variants)
+                                {
+                                    <span class="badge @(variant.IsAvailable ? "bg-secondary" : "bg-light text-dark") me-1">
+                                        @variant.Name - ?@variant.Price.ToString("N2")
+                                        @(variant.IsDefault ? " ?" : "")
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-info">@product.AllowedAddons.Count addons</span>
+                            </td>
+                            <td>
+                                @if (product.IsAvailable)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">No</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" @onclick="() => ShowEditProductModal(product)">Edit</button>
+                                    <button class="btn btn-outline-info" @onclick="() => ShowManageVariantsModal(product)">Variants</button>
+                                    <button class="btn btn-outline-secondary" @onclick="() => ShowManageAddonsModal(product)">Addons</button>
+                                    <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteProduct(product)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* Product Create/Edit Modal *@
+    @if (showProductModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(editingProduct is null ? "Add Product" : "Edit Product")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseProductModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" @bind="productForm.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" @bind="productForm.Description" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" @bind="productForm.CategoryId">
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category.Id">@category.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Image URL</label>
+                            <input type="text" class="form-control" @bind="productForm.ImageUrl" />
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="productAvailable" @bind="productForm.IsAvailable" />
+                            <label class="form-check-label" for="productAvailable">Available</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseProductModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveProduct" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Manage Variants Modal *@
+    @if (showVariantsModal && editingProduct is not null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Variants - @editingProduct.Name</h5>
+                        <button type="button" class="btn-close" @onclick="CloseVariantsModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Default</th>
+                                    <th>Available</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var variant in editingProduct.Variants)
+                                {
+                                    <tr>
+                                        <td>@variant.Name</td>
+                                        <td>?@variant.Price.ToString("N2")</td>
+                                        <td>@(variant.IsDefault ? "?" : "")</td>
+                                        <td>@(variant.IsAvailable ? "Yes" : "No")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditVariantForm(variant)">Edit</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteVariant(variant.Id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <hr />
+                        <h6>@(editingVariant is null ? "Add Variant" : "Edit Variant")</h6>
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" placeholder="Name" @bind="variantForm.Name" />
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" step="0.01" class="form-control form-control-sm" placeholder="Price" @bind="variantForm.Price" />
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="variantDefault" @bind="variantForm.IsDefault" />
+                                    <label class="form-check-label" for="variantDefault">Default</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="variantAvailable" @bind="variantForm.IsAvailable" />
+                                    <label class="form-check-label" for="variantAvailable">Available</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-sm btn-primary" @onclick="SaveVariant" disabled="@isSaving">
+                                    @(editingVariant is null ? "Add" : "Update")
+                                </button>
+                                @if (editingVariant is not null)
+                                {
+                                    <button class="btn btn-sm btn-secondary" @onclick="CancelEditVariant">Cancel</button>
                                 }
                             </div>
-                        }
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddonsModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveProductAddons" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                        }
-                        Save Addons
-                    </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseVariantsModal">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
 
-@* Delete Confirmation Modal *@
-@if (showDeleteModal && productToDelete is not null)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Delete</h5>
-                    <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete <strong>@productToDelete.Name</strong>?</p>
-                    <p class="text-danger">This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
-                    <button type="button" class="btn btn-danger" @onclick="DeleteProduct" disabled="@isSaving">
-                        @if (isSaving)
+    @* Manage Allowed Addons Modal *@
+    @if (showAddonsModal && editingProduct is not null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Allowed Addons - @editingProduct.Name</h5>
+                        <button type="button" class="btn-close" @onclick="CloseAddonsModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted">Select which addons can be added to this product:</p>
+                        @if (allAddons.Count == 0)
                         {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <div class="alert alert-info">No addons available. Create addons first.</div>
                         }
-                        Delete
-                    </button>
+                        else
+                        {
+                            @foreach (var grp in allAddons.GroupBy(a => a.Group).OrderBy(g => g.Key))
+                            {
+                                <div class="mb-3">
+                                    <strong>@grp.Key</strong>
+                                    @foreach (var addon in grp)
+                                    {
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input"
+                                                   id="addon-@addon.Id"
+                                                   checked="@selectedAddonIds.Contains(addon.Id)"
+                                                   @onchange="e => ToggleAddon(addon.Id, (bool)e.Value!)" />
+                                            <label class="form-check-label" for="addon-@addon.Id">
+                                                @addon.Name (?@addon.Price.ToString("N2"))
+                                                @if (!addon.IsAvailable)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-1">Unavailable</span>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddonsModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="SaveProductAddons" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Save Addons
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
+
+    @* Delete Confirmation Modal *@
+    @if (showDeleteModal && productToDelete is not null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete <strong>@productToDelete.Name</strong>?</p>
+                        <p class="text-danger">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="DeleteProduct" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -330,30 +329,34 @@ else
     private List<CategoryDto> categories = [];
     private List<AddonDto> allAddons = [];
     private bool isLoading = true;
+    private bool isAuthorized = false;
     private bool isSaving = false;
     private string? errorMessage;
     private string? successMessage;
 
-    // Product Modal
     private bool showProductModal = false;
     private ProductDto? editingProduct;
     private ProductFormModel productForm = new();
 
-    // Variants Modal
     private bool showVariantsModal = false;
     private ProductVariantDto? editingVariant;
     private VariantFormModel variantForm = new();
 
-    // Addons Modal
     private bool showAddonsModal = false;
     private HashSet<int> selectedAddonIds = [];
 
-    // Delete Modal
     private bool showDeleteModal = false;
     private ProductDto? productToDelete;
 
     protected override async Task OnInitializedAsync()
     {
+        await AuthState.InitializeAsync();
+        if (!AuthState.IsAdmin)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+        isAuthorized = true;
         await LoadData();
     }
 
@@ -376,16 +379,10 @@ else
         }
     }
 
-    #region Product CRUD
-
     private void ShowCreateProductModal()
     {
         editingProduct = null;
-        productForm = new ProductFormModel
-        {
-            CategoryId = categories.FirstOrDefault()?.Id ?? 0,
-            IsAvailable = true
-        };
+        productForm = new ProductFormModel { CategoryId = categories.FirstOrDefault()?.Id ?? 0, IsAvailable = true };
         showProductModal = true;
     }
 
@@ -403,104 +400,46 @@ else
         showProductModal = true;
     }
 
-    private void CloseProductModal()
-    {
-        showProductModal = false;
-        editingProduct = null;
-    }
+    private void CloseProductModal() { showProductModal = false; editingProduct = null; }
 
     private async Task SaveProduct()
     {
-        if (string.IsNullOrWhiteSpace(productForm.Name))
-        {
-            errorMessage = "Product name is required.";
-            return;
-        }
-
-        isSaving = true;
-        errorMessage = null;
-
+        if (string.IsNullOrWhiteSpace(productForm.Name)) { errorMessage = "Product name is required."; return; }
+        isSaving = true; errorMessage = null;
         try
         {
             if (editingProduct is null)
             {
-                var request = new CreateProductRequest(
-                productForm.CategoryId,
-            productForm.Name,
-       productForm.Description,
-                        productForm.ImageUrl,
-          productForm.IsAvailable
-                 );
-                await AdminApi.CreateProductAsync(request);
+                await AdminApi.CreateProductAsync(new CreateProductRequest(productForm.CategoryId, productForm.Name, productForm.Description, productForm.ImageUrl, productForm.IsAvailable));
                 successMessage = "Product created successfully.";
             }
             else
             {
-                var request = new UpdateProductRequest(
-            productForm.Name,
-                 productForm.Description,
-                          productForm.ImageUrl,
-            productForm.IsAvailable,
-            productForm.CategoryId
-                 );
-                await AdminApi.UpdateProductAsync(editingProduct.Id, request);
+                await AdminApi.UpdateProductAsync(editingProduct.Id, new UpdateProductRequest(productForm.Name, productForm.Description, productForm.ImageUrl, productForm.IsAvailable, productForm.CategoryId));
                 successMessage = "Product updated successfully.";
             }
-
             CloseProductModal();
             await LoadData();
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to save product: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Failed to save product: {ex.Message}"; }
+        finally { isSaving = false; }
     }
 
-    private void ConfirmDeleteProduct(ProductDto product)
-    {
-        productToDelete = product;
-        showDeleteModal = true;
-    }
+    private void ConfirmDeleteProduct(ProductDto product) { productToDelete = product; showDeleteModal = true; }
 
     private async Task DeleteProduct()
     {
         if (productToDelete is null) return;
-
-        isSaving = true;
-        errorMessage = null;
-
+        isSaving = true; errorMessage = null;
         try
         {
             var success = await AdminApi.DeleteProductAsync(productToDelete.Id);
-            if (success)
-            {
-                successMessage = $"Product '{productToDelete.Name}' deleted.";
-                await LoadData();
-            }
-            else
-            {
-                errorMessage = "Failed to delete product. It may have associated orders.";
-            }
+            if (success) { successMessage = $"Product '{productToDelete.Name}' deleted."; await LoadData(); }
+            else { errorMessage = "Failed to delete product. It may have associated orders."; }
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to delete product: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-            showDeleteModal = false;
-            productToDelete = null;
-        }
+        catch (Exception ex) { errorMessage = $"Failed to delete product: {ex.Message}"; }
+        finally { isSaving = false; showDeleteModal = false; productToDelete = null; }
     }
-
-    #endregion
-
-    #region Variants
 
     private void ShowManageVariantsModal(ProductDto product)
     {
@@ -510,102 +449,47 @@ else
         showVariantsModal = true;
     }
 
-    private void CloseVariantsModal()
-    {
-        showVariantsModal = false;
-        editingProduct = null;
-        editingVariant = null;
-    }
+    private void CloseVariantsModal() { showVariantsModal = false; editingProduct = null; editingVariant = null; }
 
     private void ShowEditVariantForm(ProductVariantDto variant)
     {
         editingVariant = variant;
-        variantForm = new VariantFormModel
-        {
-            Name = variant.Name,
-            Price = variant.Price,
-            IsDefault = variant.IsDefault,
-            IsAvailable = variant.IsAvailable
-        };
+        variantForm = new VariantFormModel { Name = variant.Name, Price = variant.Price, IsDefault = variant.IsDefault, IsAvailable = variant.IsAvailable };
     }
 
-    private void CancelEditVariant()
-    {
-        editingVariant = null;
-        variantForm = new VariantFormModel { IsAvailable = true };
-    }
+    private void CancelEditVariant() { editingVariant = null; variantForm = new VariantFormModel { IsAvailable = true }; }
 
     private async Task SaveVariant()
     {
         if (editingProduct is null || string.IsNullOrWhiteSpace(variantForm.Name)) return;
-
-        isSaving = true;
-        errorMessage = null;
-
+        isSaving = true; errorMessage = null;
         try
         {
             if (editingVariant is null)
-            {
-                var request = new CreateProductVariantRequest(
-                    variantForm.Name,
-                    variantForm.Price,
-                    variantForm.IsDefault,
-                    variantForm.IsAvailable
-                );
-                await AdminApi.CreateVariantAsync(editingProduct.Id, request);
-            }
+                await AdminApi.CreateVariantAsync(editingProduct.Id, new CreateProductVariantRequest(variantForm.Name, variantForm.Price, variantForm.IsDefault, variantForm.IsAvailable));
             else
-            {
-                var request = new UpdateProductVariantRequest(
-                    variantForm.Name,
-                    variantForm.Price,
-                    variantForm.IsDefault,
-                    variantForm.IsAvailable
-                );
-                await AdminApi.UpdateVariantAsync(editingProduct.Id, editingVariant.Id, request);
-            }
-
-            // Reload product to get updated variants
+                await AdminApi.UpdateVariantAsync(editingProduct.Id, editingVariant.Id, new UpdateProductVariantRequest(variantForm.Name, variantForm.Price, variantForm.IsDefault, variantForm.IsAvailable));
             editingProduct = await AdminApi.GetProductAsync(editingProduct.Id);
             await LoadData();
             CancelEditVariant();
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to save variant: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Failed to save variant: {ex.Message}"; }
+        finally { isSaving = false; }
     }
 
     private async Task DeleteVariant(int variantId)
     {
         if (editingProduct is null) return;
-
-        isSaving = true;
-        errorMessage = null;
-
+        isSaving = true; errorMessage = null;
         try
         {
             await AdminApi.DeleteVariantAsync(editingProduct.Id, variantId);
             editingProduct = await AdminApi.GetProductAsync(editingProduct.Id);
             await LoadData();
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to delete variant: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Failed to delete variant: {ex.Message}"; }
+        finally { isSaving = false; }
     }
-
-    #endregion
-
-    #region Product Addons
 
     private void ShowManageAddonsModal(ProductDto product)
     {
@@ -614,47 +498,28 @@ else
         showAddonsModal = true;
     }
 
-    private void CloseAddonsModal()
-    {
-        showAddonsModal = false;
-        editingProduct = null;
-        selectedAddonIds.Clear();
-    }
+    private void CloseAddonsModal() { showAddonsModal = false; editingProduct = null; selectedAddonIds.Clear(); }
 
     private void ToggleAddon(int addonId, bool isChecked)
     {
-        if (isChecked)
-            selectedAddonIds.Add(addonId);
-        else
-            selectedAddonIds.Remove(addonId);
+        if (isChecked) selectedAddonIds.Add(addonId);
+        else selectedAddonIds.Remove(addonId);
     }
 
     private async Task SaveProductAddons()
     {
         if (editingProduct is null) return;
-
-        isSaving = true;
-        errorMessage = null;
-
+        isSaving = true; errorMessage = null;
         try
         {
-            var request = new UpdateProductAddonsRequest(selectedAddonIds.ToList());
-            await AdminApi.UpdateProductAddonsAsync(editingProduct.Id, request);
+            await AdminApi.UpdateProductAddonsAsync(editingProduct.Id, new UpdateProductAddonsRequest(selectedAddonIds.ToList()));
             successMessage = $"Addons updated for '{editingProduct.Name}'.";
             CloseAddonsModal();
             await LoadData();
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to update addons: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Failed to update addons: {ex.Message}"; }
+        finally { isSaving = false; }
     }
-
-    #endregion
 
     private class ProductFormModel
     {

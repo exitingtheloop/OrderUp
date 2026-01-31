@@ -1,97 +1,107 @@
 @page "/admin/addons"
 @using OrderUp.Client.Services
+@using OrderUp.Client.State
 @using OrderUp.Shared.Contracts.Menu.Requests
 @using OrderUp.Shared.Contracts.Menu.Responses
 @inject AdminApi AdminApi
+@inject AuthState AuthState
+@inject NavigationManager Navigation
 
 <PageTitle>Admin - Addons</PageTitle>
 
-<h1>Addons</h1>
-
-@if (errorMessage is not null)
+@if (!isAuthorized)
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @errorMessage
-        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-    </div>
-}
-
-@if (successMessage is not null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @successMessage
-        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-    </div>
-}
-
-@if (isLoading)
-{
-    <p><em>Loading addons...</em></p>
+    <p><em>Checking authorization...</em></p>
 }
 else
 {
-    <div class="mb-3">
-        <button class="btn btn-primary" @onclick="ShowCreateAddonModal">
-            <i class="bi bi-plus"></i> Add Addon
-        </button>
-    </div>
+    <h1>Addons</h1>
 
-    @foreach (var group in addons.GroupBy(a => a.Group).OrderBy(g => g.Key))
+    @if (errorMessage is not null)
     {
-        <div class="card mb-3">
-            <div class="card-header">
-                <strong>@group.Key</strong>
-                <span class="badge bg-secondary ms-2">@group.Count() addons</span>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-striped mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Price</th>
-                            <th>Max Per Item</th>
-                            <th>Available</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var addon in group)
-                        {
-                            <tr class="@(addon.IsAvailable ? "" : "table-secondary")">
-                                <td>@addon.Name</td>
-                                <td>?@addon.Price.ToString("N2")</td>
-                                <td>@(addon.MaxPerItem?.ToString() ?? "Unlimited")</td>
-                                <td>
-                                    @if (addon.IsAvailable)
-                                    {
-                                        <span class="badge bg-success">Yes</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">No</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" @onclick="() => ShowEditAddonModal(addon)">
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteAddon(addon)">
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
         </div>
     }
 
-    @if (addons.Count == 0)
+    @if (successMessage is not null)
     {
-        <div class="alert alert-info">No addons yet. Create your first addon!</div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <p><em>Loading addons...</em></p>
+    }
+    else
+    {
+        <div class="mb-3">
+            <button class="btn btn-primary" @onclick="ShowCreateAddonModal">
+                <i class="bi bi-plus"></i> Add Addon
+            </button>
+        </div>
+
+        @foreach (var group in addons.GroupBy(a => a.Group).OrderBy(g => g.Key))
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>@group.Key</strong>
+                    <span class="badge bg-secondary ms-2">@group.Count() addons</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Max Per Item</th>
+                                <th>Available</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var addon in group)
+                            {
+                                <tr class="@(addon.IsAvailable ? "" : "table-secondary")">
+                                    <td>@addon.Name</td>
+                                    <td>?@addon.Price.ToString("N2")</td>
+                                    <td>@(addon.MaxPerItem?.ToString() ?? "Unlimited")</td>
+                                    <td>
+                                        @if (addon.IsAvailable)
+                                        {
+                                            <span class="badge bg-success">Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">No</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" @onclick="() => ShowEditAddonModal(addon)">
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-outline-danger" @onclick="() => ConfirmDeleteAddon(addon)">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (addons.Count == 0)
+        {
+            <div class="alert alert-info">No addons yet. Create your first addon!</div>
+        }
     }
 }
 
@@ -118,9 +128,9 @@ else
                         <label class="form-label">Group</label>
                         <input type="text" class="form-control" @bind="addonForm.Group" list="groupSuggestions" />
                         <datalist id="groupSuggestions">
-                            @foreach (var group in existingGroups)
+                            @foreach (var grp in existingGroups)
                             {
-                                <option value="@group" />
+                                <option value="@grp" />
                             }
                         </datalist>
                         <small class="text-muted">e.g., Espresso, Milk Alternative, Syrups</small>
@@ -181,16 +191,15 @@ else
 @code {
     private List<AddonDto> addons = [];
     private bool isLoading = true;
+    private bool isAuthorized = false;
     private bool isSaving = false;
     private string? errorMessage;
     private string? successMessage;
 
-    // Addon Modal
     private bool showAddonModal = false;
     private AddonDto? editingAddon;
     private AddonFormModel addonForm = new();
 
-    // Delete Modal
     private bool showDeleteModal = false;
     private AddonDto? addonToDelete;
 
@@ -198,6 +207,15 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await AuthState.InitializeAsync();
+
+        if (!AuthState.IsAdmin)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        isAuthorized = true;
         await LoadAddons();
     }
 
@@ -279,12 +297,12 @@ else
             else
             {
                 var request = new UpdateAddonRequest(
-                    addonForm.Name,
-                    addonForm.Price,
-                    addonForm.Group,
+                         addonForm.Name,
+                 addonForm.Price,
+                      addonForm.Group,
                     addonForm.MaxPerItem,
-                    addonForm.IsAvailable
-                );
+                 addonForm.IsAvailable
+                    );
                 await AdminApi.UpdateAddonAsync(editingAddon.Id, request);
                 successMessage = "Addon updated successfully.";
             }
