@@ -43,42 +43,56 @@ public class StripeGateway : IPaymentGateway
 
         foreach (var item in order.Items)
         {
-            // Base item price
-            var unitAmount = (long)(item.BaseUnitPriceSnapshot * 100); // Stripe uses cents
-
-            // Add addon prices to unit amount
-            foreach (var addon in item.Addons)
-            {
-                unitAmount += (long)(addon.UnitPriceSnapshot * addon.Quantity * 100);
-            }
-
-            // Build description with addons
-            var description = item.VariantNameSnapshot;
-            if (item.Addons.Any())
-            {
-                var addonNames = item.Addons.Select(a =>
-                    a.Quantity > 1 ? $"{a.Quantity}x {a.NameSnapshot}" : a.NameSnapshot);
-                description += $" + {string.Join(", ", addonNames)}";
-            }
+            // Main product line item
+            // Name = ProductNameSnapshot + VariantNameSnapshot
+            // UnitAmount = BaseUnitPriceSnapshot * 100 (Stripe uses smallest currency unit)
+            var productName = $"{item.ProductNameSnapshot} ({item.VariantNameSnapshot})";
+            var unitAmountCents = (long)(item.BaseUnitPriceSnapshot * 100);
 
             lineItems.Add(new SessionLineItemOptions
             {
                 PriceData = new SessionLineItemPriceDataOptions
                 {
                     Currency = _paymentsOptions.Currency.ToLower(),
-                    UnitAmount = unitAmount,
+                    UnitAmount = unitAmountCents,
                     ProductData = new SessionLineItemPriceDataProductDataOptions
                     {
-                        Name = item.ProductNameSnapshot,
-                        Description = description
+                        Name = productName
                     }
                 },
                 Quantity = item.Quantity
             });
+
+            // Each addon becomes its own line item
+            foreach (var addon in item.Addons)
+            {
+                var addonUnitAmountCents = (long)(addon.UnitPriceSnapshot * 100);
+
+                // For addons, we need to account for:
+                // - addon.Quantity = how many of this addon per item
+                // - item.Quantity = how many items ordered
+                // Total addon quantity = addon.Quantity * item.Quantity
+                var totalAddonQuantity = addon.Quantity * item.Quantity;
+
+                lineItems.Add(new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        Currency = _paymentsOptions.Currency.ToLower(),
+                        UnitAmount = addonUnitAmountCents,
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = addon.NameSnapshot,
+                            Description = $"Add-on for {item.ProductNameSnapshot}"
+                        }
+                    },
+                    Quantity = totalAddonQuantity
+                });
+            }
         }
 
-        var successUrl = $"{_paymentsOptions.PublicBaseUrl}/order/{order.Id}?payment=success";
-        var cancelUrl = $"{_paymentsOptions.PublicBaseUrl}/order/{order.Id}?payment=cancelled";
+        var successUrl = $"{_paymentsOptions.PublicBaseUrl}/order-success/{order.Id}?paid=1";
+        var cancelUrl = $"{_paymentsOptions.PublicBaseUrl}/order-success/{order.Id}?cancelled=1";
 
         var options = new SessionCreateOptions
         {
@@ -86,11 +100,11 @@ public class StripeGateway : IPaymentGateway
             LineItems = lineItems,
             SuccessUrl = successUrl,
             CancelUrl = cancelUrl,
+            ClientReferenceId = order.Id.ToString(),
             Metadata = new Dictionary<string, string>
             {
-                ["order_id"] = order.Id.ToString()
+                ["orderId"] = order.Id.ToString()
             },
-            CustomerEmail = null, // Could add if we collect email
             PaymentMethodTypes = ["card"]
         };
 
@@ -99,7 +113,7 @@ public class StripeGateway : IPaymentGateway
 
         _logger.LogInformation(
             "Created Stripe checkout session {SessionId} for order {OrderId}",
-            session.Id, 
+            session.Id,
             order.Id);
 
         return (session.Url!, session.Id);
@@ -107,14 +121,19 @@ public class StripeGateway : IPaymentGateway
 
     public async Task HandleWebhookAsync(HttpRequest request, CancellationToken ct = default)
     {
+        // Read raw request body as string (required for signature verification)
         var json = await new StreamReader(request.Body).ReadToEndAsync(ct);
+
+        // Get Stripe-Signature header
         var signature = request.Headers["Stripe-Signature"].FirstOrDefault();
 
         if (string.IsNullOrEmpty(signature))
         {
+            _logger.LogWarning("Missing Stripe-Signature header in webhook request");
             throw new InvalidOperationException("Missing Stripe-Signature header");
         }
 
+        // Verify with EventUtility.ConstructEvent(body, signature, WebhookSecret)
         Event stripeEvent;
         try
         {
@@ -131,9 +150,10 @@ public class StripeGateway : IPaymentGateway
 
         _logger.LogInformation(
             "Received Stripe webhook event {EventType} with ID {EventId}",
-            stripeEvent.Type, 
+            stripeEvent.Type,
             stripeEvent.Id);
 
+        // Handle event types
         switch (stripeEvent.Type)
         {
             case EventTypes.CheckoutSessionCompleted:
@@ -150,6 +170,73 @@ public class StripeGateway : IPaymentGateway
         }
     }
 
+    /// <summary>
+    /// Finds an order from a Stripe checkout session using a hybrid approach:
+    /// 1. Fast path: Parse orderId from metadata, verify PaymentSessionId matches
+    /// 2. Fallback: Query by PaymentSessionId directly
+    /// </summary>
+    private async Task<Order?> FindOrderFromSessionAsync(Session session, CancellationToken ct)
+    {
+        // Try 1: Fast path - parse orderId from metadata
+        if (session.Metadata.TryGetValue("orderId", out var orderIdStr) &&
+            int.TryParse(orderIdStr, out var orderId))
+        {
+            var order = await _dbContext.Orders.FindAsync([orderId], ct);
+
+            if (order is not null)
+            {
+                // Security check: verify PaymentSessionId matches
+                if (order.PaymentSessionId == session.Id)
+                {
+                    return order;
+                }
+
+                _logger.LogWarning(
+                    "Order {OrderId} found but PaymentSessionId mismatch. Expected {Expected}, got {Actual}",
+                    orderId,
+                    session.Id,
+                    order.PaymentSessionId);
+            }
+            else
+            {
+                _logger.LogWarning("Order {OrderId} from metadata not found in database", orderId);
+            }
+        }
+
+        // Try 2: Fallback to ClientReferenceId
+        if (!string.IsNullOrEmpty(session.ClientReferenceId) &&
+            int.TryParse(session.ClientReferenceId, out var clientRefId))
+        {
+            var order = await _dbContext.Orders.FindAsync([clientRefId], ct);
+
+            if (order is not null && order.PaymentSessionId == session.Id)
+            {
+                return order;
+            }
+        }
+
+        // Try 3: Final fallback - query by PaymentSessionId directly
+        // This handles edge cases where metadata might be corrupted
+        var orderBySessionId = await _dbContext.Orders
+            .FirstOrDefaultAsync(o => o.PaymentSessionId == session.Id, ct);
+
+        if (orderBySessionId is not null)
+        {
+            _logger.LogInformation(
+                "Found order {OrderId} via PaymentSessionId fallback query",
+                orderBySessionId.Id);
+            return orderBySessionId;
+        }
+
+        _logger.LogWarning(
+            "Could not find order for session {SessionId}. Metadata orderId: {MetadataOrderId}, ClientReferenceId: {ClientReferenceId}",
+            session.Id,
+            orderIdStr ?? "null",
+            session.ClientReferenceId ?? "null");
+
+        return null;
+    }
+
     private async Task HandleCheckoutSessionCompleted(Event stripeEvent, CancellationToken ct)
     {
         var session = stripeEvent.Data.Object as Session;
@@ -159,43 +246,47 @@ public class StripeGateway : IPaymentGateway
             return;
         }
 
-        if (!session.Metadata.TryGetValue("order_id", out var orderIdStr) ||
-            !int.TryParse(orderIdStr, out var orderId))
-        {
-            _logger.LogWarning("Missing or invalid order_id in session metadata");
-            return;
-        }
-
-        var order = await _dbContext.Orders.FindAsync([orderId], ct);
+        // Find order using hybrid approach
+        var order = await FindOrderFromSessionAsync(session, ct);
         if (order is null)
         {
-            _logger.LogWarning("Order {OrderId} not found for completed session", orderId);
             return;
         }
 
-        // Idempotency check
-        if (order.PaymentStatus == Data.Entities.PaymentStatus.Paid)
+        // Idempotency check: if already Paid, ignore
+        if (order.PaymentStatus == PaymentStatus.Paid)
         {
-            _logger.LogInformation("Order {OrderId} already marked as paid, skipping", orderId);
+            _logger.LogInformation("Order {OrderId} already marked as paid, skipping", order.Id);
             return;
         }
 
-        order.PaymentStatus = Data.Entities.PaymentStatus.Paid;
-        order.PaymentIntentId = session.PaymentIntentId;
-        order.PaymentLastEventAtUtc = DateTime.UtcNow;
-
-        // Auto-confirm order when paid
-        if (order.Status == Data.Entities.OrderStatus.Pending)
+        // Check if payment is complete
+        if (session.PaymentStatus == "paid")
         {
-            order.Status = Data.Entities.OrderStatus.Confirmed;
+            order.PaymentStatus = PaymentStatus.Paid;
+            order.PaymentIntentId = session.PaymentIntentId;
+            order.PaymentLastEventAtUtc = DateTime.UtcNow;
+
+            // Auto-confirm order when paid
+            if (order.Status == OrderStatus.Pending)
+            {
+                order.Status = OrderStatus.Confirmed;
+            }
+
+            await _dbContext.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "Order {OrderId} marked as Paid via Stripe session {SessionId}",
+                order.Id,
+                session.Id);
         }
-
-        await _dbContext.SaveChangesAsync(ct);
-
-        _logger.LogInformation(
-            "Order {OrderId} marked as Paid via Stripe session {SessionId}",
-            orderId, 
-            session.Id);
+        else
+        {
+            _logger.LogInformation(
+                "Checkout session {SessionId} completed but payment status is {PaymentStatus}",
+                session.Id,
+                session.PaymentStatus);
+        }
     }
 
     private async Task HandleCheckoutSessionExpired(Event stripeEvent, CancellationToken ct)
@@ -203,25 +294,18 @@ public class StripeGateway : IPaymentGateway
         var session = stripeEvent.Data.Object as Session;
         if (session is null) return;
 
-        if (!session.Metadata.TryGetValue("order_id", out var orderIdStr) ||
-            !int.TryParse(orderIdStr, out var orderId))
-        {
-            return;
-        }
-
-        var order = await _dbContext.Orders.FindAsync([orderId], ct);
+        // Find order using hybrid approach
+        var order = await FindOrderFromSessionAsync(session, ct);
         if (order is null) return;
 
-        // Only update if still pending payment
-        if (order.PaymentStatus == Data.Entities.PaymentStatus.Pending)
+        // Only update if still pending payment (idempotency)
+        if (order.PaymentStatus == PaymentStatus.Pending)
         {
-            order.PaymentStatus = Data.Entities.PaymentStatus.Failed;
+            order.PaymentStatus = PaymentStatus.Failed;
             order.PaymentLastEventAtUtc = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(ct);
 
-            _logger.LogInformation(
-                "Order {OrderId} payment session expired", 
-                orderId);
+            _logger.LogInformation("Order {OrderId} payment session expired", order.Id);
         }
     }
 }

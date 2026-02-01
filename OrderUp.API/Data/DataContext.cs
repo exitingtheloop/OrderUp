@@ -124,6 +124,10 @@ namespace OrderUp.API.Data
             // Performance indexes
             modelBuilder.Entity<Order>()
                 .HasIndex(o => o.CreatedAtUtc);
+
+            // Index on PaymentSessionId for webhook order lookup
+            modelBuilder.Entity<Order>()
+                .HasIndex(o => o.PaymentSessionId);
         }
     }
 }

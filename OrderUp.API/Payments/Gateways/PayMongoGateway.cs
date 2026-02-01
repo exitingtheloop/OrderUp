@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OrderUp.API.Data;
 using OrderUp.API.Data.Entities;
@@ -33,7 +34,7 @@ public class PayMongoGateway : IPaymentGateway
         HttpClient httpClient,
         IOptions<PayMongoOptions> payMongoOptions,
         IOptions<PaymentsOptions> paymentsOptions,
-        DataContext dbContext,
+     DataContext dbContext,
         ILogger<PayMongoGateway> logger)
     {
         _httpClient = httpClient;
@@ -46,12 +47,12 @@ public class PayMongoGateway : IPaymentGateway
         _httpClient.BaseAddress = new Uri("https://api.paymongo.com/v1/");
         var authBytes = Encoding.UTF8.GetBytes($"{_payMongoOptions.SecretKey}:");
         _httpClient.DefaultRequestHeaders.Authorization =
-             new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
+          new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
     }
 
     public async Task<(string CheckoutUrl, string SessionId)> CreateCheckoutAsync(
-        Order order,
-        CancellationToken ct = default)
+      Order order,
+          CancellationToken ct = default)
     {
         var lineItems = new List<PayMongoLineItem>();
 
@@ -70,7 +71,7 @@ public class PayMongoGateway : IPaymentGateway
             if (item.Addons.Any())
             {
                 var addonNames = item.Addons.Select(a =>
-                       a.Quantity > 1 ? $"{a.Quantity}x {a.NameSnapshot}" : a.NameSnapshot);
+                    a.Quantity > 1 ? $"{a.Quantity}x {a.NameSnapshot}" : a.NameSnapshot);
                 description += $" + {string.Join(", ", addonNames)}";
             }
 
@@ -84,8 +85,8 @@ public class PayMongoGateway : IPaymentGateway
             });
         }
 
-        var successUrl = $"{_paymentsOptions.PublicBaseUrl}/order/{order.Id}?payment=success";
-        var cancelUrl = $"{_paymentsOptions.PublicBaseUrl}/order/{order.Id}?payment=cancelled";
+        var successUrl = $"{_paymentsOptions.PublicBaseUrl}/order-success/{order.Id}?paid=1";
+        var cancelUrl = $"{_paymentsOptions.PublicBaseUrl}/order-success/{order.Id}?cancelled=1";
 
         var requestBody = new PayMongoCheckoutRequest
         {
@@ -97,10 +98,11 @@ public class PayMongoGateway : IPaymentGateway
                     PaymentMethodTypes = _payMongoOptions.PaymentMethodTypes,
                     SuccessUrl = successUrl,
                     CancelUrl = cancelUrl,
+                    ReferenceNumber = order.Id.ToString(),
                     Description = $"Order #{order.Id}",
                     Metadata = new Dictionary<string, string>
                     {
-                        ["order_id"] = order.Id.ToString()
+                        ["orderId"] = order.Id.ToString()
                     }
                 }
             }
@@ -115,8 +117,8 @@ public class PayMongoGateway : IPaymentGateway
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError(
-                 "PayMongo checkout creation failed: {StatusCode} - {Response}",
-                  response.StatusCode, responseJson);
+                "PayMongo checkout creation failed: {StatusCode} - {Response}",
+                response.StatusCode, responseJson);
             throw new InvalidOperationException($"PayMongo API error: {response.StatusCode}");
         }
 
@@ -131,7 +133,7 @@ public class PayMongoGateway : IPaymentGateway
 
         _logger.LogInformation(
             "Created PayMongo checkout session {SessionId} for order {OrderId}",
-            sessionId, 
+            sessionId,
             order.Id);
 
         return (checkoutUrl, sessionId);
@@ -163,7 +165,7 @@ public class PayMongoGateway : IPaymentGateway
         var eventType = webhookEvent.Data?.Attributes?.Type;
         _logger.LogInformation(
             "Received PayMongo webhook event {EventType} with ID {EventId}",
-            eventType, 
+            eventType,
             webhookEvent.Data?.Id);
 
         switch (eventType)
@@ -211,71 +213,124 @@ public class PayMongoGateway : IPaymentGateway
         return string.Equals(computedSignature, expectedSignature, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// Finds an order from a PayMongo webhook using a hybrid approach:
+    /// 1. Fast path: Parse orderId from metadata, verify PaymentSessionId matches
+    /// 2. Fallback: Query by PaymentSessionId directly
+    /// </summary>
+    private async Task<Order?> FindOrderFromWebhookAsync(
+        string? sessionId,
+        Dictionary<string, string>? metadata,
+        CancellationToken ct)
+    {
+        string? orderIdStr = null;
+
+        // Try 1: Fast path - parse orderId from metadata
+        if (metadata is not null &&
+            metadata.TryGetValue("orderId", out orderIdStr) &&
+            int.TryParse(orderIdStr, out var orderId))
+        {
+            var order = await _dbContext.Orders.FindAsync([orderId], ct);
+
+            if (order is not null)
+            {
+                // Security check: verify PaymentSessionId matches
+                if (order.PaymentSessionId == sessionId)
+                {
+                    return order;
+                }
+
+                _logger.LogWarning(
+                    "Order {OrderId} found but PaymentSessionId mismatch. Expected {Expected}, got {Actual}",
+                    orderId,
+                    sessionId,
+                    order.PaymentSessionId);
+            }
+            else
+            {
+                _logger.LogWarning("Order {OrderId} from metadata not found in database", orderId);
+            }
+        }
+
+        // Try 2: Fallback - query by PaymentSessionId directly
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            var orderBySessionId = await _dbContext.Orders
+                .FirstOrDefaultAsync(o => o.PaymentSessionId == sessionId, ct);
+
+            if (orderBySessionId is not null)
+            {
+                _logger.LogInformation(
+                    "Found order {OrderId} via PaymentSessionId fallback query",
+                    orderBySessionId.Id);
+                return orderBySessionId;
+            }
+        }
+
+        _logger.LogWarning(
+            "Could not find order for PayMongo session {SessionId}. Metadata orderId: {MetadataOrderId}",
+            sessionId ?? "null",
+            orderIdStr ?? "null");
+
+        return null;
+    }
+
     private async Task HandleCheckoutSessionPaid(PayMongoWebhookEvent webhookEvent, CancellationToken ct)
     {
         var checkoutData = webhookEvent.Data?.Attributes?.Data;
+        var sessionId = checkoutData?.Id;
         var metadata = checkoutData?.Attributes?.Metadata;
 
-        if (metadata is null || !metadata.TryGetValue("order_id", out var orderIdStr) ||
-            !int.TryParse(orderIdStr, out var orderId))
-        {
-            _logger.LogWarning("Missing or invalid order_id in PayMongo webhook metadata");
-            return;
-        }
-
-        var order = await _dbContext.Orders.FindAsync([orderId], ct);
+        // Find order using hybrid approach
+        var order = await FindOrderFromWebhookAsync(sessionId, metadata, ct);
         if (order is null)
         {
-            _logger.LogWarning("Order {OrderId} not found for PayMongo webhook", orderId);
             return;
         }
 
         // Idempotency check
-        if (order.PaymentStatus == Data.Entities.PaymentStatus.Paid)
+        if (order.PaymentStatus == PaymentStatus.Paid)
         {
-            _logger.LogInformation("Order {OrderId} already marked as paid, skipping", orderId);
+            _logger.LogInformation("Order {OrderId} already marked as paid, skipping", order.Id);
             return;
         }
 
-        order.PaymentStatus = Data.Entities.PaymentStatus.Paid;
+        order.PaymentStatus = PaymentStatus.Paid;
         order.PaymentIntentId = checkoutData?.Attributes?.PaymentIntentId;
         order.PaymentLastEventAtUtc = DateTime.UtcNow;
 
         // Auto-confirm order when paid
-        if (order.Status == Data.Entities.OrderStatus.Pending)
+        if (order.Status == OrderStatus.Pending)
         {
-            order.Status = Data.Entities.OrderStatus.Confirmed;
+            order.Status = OrderStatus.Confirmed;
         }
 
         await _dbContext.SaveChangesAsync(ct);
 
-        _logger.LogInformation(
-            "Order {OrderId} marked as Paid via PayMongo", 
-            orderId);
+        _logger.LogInformation("Order {OrderId} marked as Paid via PayMongo", order.Id);
     }
 
     private async Task HandleCheckoutSessionFailed(PayMongoWebhookEvent webhookEvent, CancellationToken ct)
     {
         var checkoutData = webhookEvent.Data?.Attributes?.Data;
+        var sessionId = checkoutData?.Id;
         var metadata = checkoutData?.Attributes?.Metadata;
 
-        if (metadata is null || !metadata.TryGetValue("order_id", out var orderIdStr) ||
-           !int.TryParse(orderIdStr, out var orderId))
+        // Find order using hybrid approach
+        var order = await FindOrderFromWebhookAsync(sessionId, metadata, ct);
+        if (order is null)
         {
             return;
         }
 
-        var order = await _dbContext.Orders.FindAsync([orderId], ct);
-        if (order is null) return;
-
-        // Only update if still pending payment
-        if (order.PaymentStatus == Data.Entities.PaymentStatus.Pending)
+        // Only update if still pending payment (idempotency)
+        if (order.PaymentStatus == PaymentStatus.Pending)
         {
-            order.PaymentStatus = Data.Entities.PaymentStatus.Failed;
+            order.PaymentStatus = PaymentStatus.Failed;
             order.PaymentLastEventAtUtc = DateTime.UtcNow;
             await _dbContext.SaveChangesAsync(ct);
 
-            _logger.LogInformation("Order {OrderId} payment failed via PayMongo", orderId);
+            _logger.LogInformation("Order {OrderId} payment failed via PayMongo", order.Id);
         }
     }
 
@@ -297,6 +352,7 @@ public class PayMongoGateway : IPaymentGateway
         public string[] PaymentMethodTypes { get; set; } = [];
         public string SuccessUrl { get; set; } = string.Empty;
         public string CancelUrl { get; set; } = string.Empty;
+        public string? ReferenceNumber { get; set; }
         public string? Description { get; set; }
         public Dictionary<string, string>? Metadata { get; set; }
         public string? CheckoutUrl { get; set; }
@@ -342,6 +398,7 @@ public class PayMongoGateway : IPaymentGateway
 
     private class PayMongoWebhookInnerData
     {
+        public string? Id { get; set; }
         public PayMongoCheckoutAttributes? Attributes { get; set; }
     }
 

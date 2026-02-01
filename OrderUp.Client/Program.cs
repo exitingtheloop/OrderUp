@@ -14,6 +14,7 @@ builder.Services.AddScoped<MenuApi>();
 builder.Services.AddScoped<OrdersApi>();
 builder.Services.AddScoped<AdminApi>();
 builder.Services.AddScoped<AuthApi>();
+builder.Services.AddScoped<PaymentsApi>();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<CartState>();
 
