@@ -4,6 +4,7 @@
 @using OrderUp.Shared.Contracts.Orders.Requests
 @inject CartState CartState
 @inject OrdersApi OrdersApi
+@inject PaymentsApi PaymentsApi
 @inject NavigationManager Navigation
 
 <PageTitle>OrderUp - Cart</PageTitle>
@@ -127,11 +128,11 @@
                 @if (_submitting)
                 {
                     <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                    <span>Placing Order...</span>
+                    <span>@_submitStatus</span>
                 }
                 else
                 {
-                    <span>Place Order</span>
+                    <span>Place Order & Pay</span>
                 }
             </button>
         </div>
@@ -145,6 +146,7 @@
     private bool _submitted;
     private bool _submitting;
     private string? _errorMessage;
+    private string _submitStatus = "Processing...";
 
     private void IncreaseQuantity(CartItem item)
     {
@@ -173,10 +175,12 @@
         }
 
         _submitting = true;
+        _submitStatus = "Creating order...";
+        StateHasChanged();
 
         try
         {
-            // Build the request from cart
+            // Step 1: Create the order
             var request = new CreateOrderRequest(
                 CustomerName: _customerName.Trim(),
                 CustomerPhone: _customerPhone.Trim(),
@@ -189,21 +193,42 @@
                     Addons: item.Addons.Select(a => new CreateOrderItemAddonRequest(
                         AddonId: a.AddonId,
                         Quantity: a.Quantity
+                        )).ToList()
                     )).ToList()
-                )).ToList()
             );
 
-            var response = await OrdersApi.CreateOrderAsync(request);
+            var orderResponse = await OrdersApi.CreateOrderAsync(request);
 
-            if (response is not null)
+            if (orderResponse is null)
             {
+                _errorMessage = "Failed to create order. Please try again.";
+                return;
+            }
+
+            var orderId = orderResponse.OrderId;
+
+            // Step 2: Create checkout session
+            _submitStatus = "Redirecting to payment...";
+            StateHasChanged();
+
+            var checkoutUrl = await PaymentsApi.CreateCheckoutSessionAsync(orderId);
+
+            if (string.IsNullOrEmpty(checkoutUrl))
+            {
+                // Payment creation failed - redirect to order page where they can retry
+                _errorMessage = "Failed to initiate payment. Redirecting to order page...";
+                StateHasChanged();
+                await Task.Delay(1500);
                 CartState.Clear();
-                Navigation.NavigateTo($"/order-success/{response.OrderId}");
+                Navigation.NavigateTo($"/order-success/{orderId}");
+                return;
             }
-            else
-            {
-                _errorMessage = "Failed to place order. Please try again.";
-            }
+
+            // Success! Clear cart and redirect to payment provider
+            CartState.Clear();
+
+            // Force full navigation to external payment page
+            Navigation.NavigateTo(checkoutUrl, forceLoad: true);
         }
         catch (Exception ex)
         {
