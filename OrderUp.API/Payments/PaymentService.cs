@@ -59,7 +59,7 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException($"Order {orderId} not found");
         }
 
-        // Validate order can be paid
+        // Validate order is not already paid
         if (order.PaymentStatus == PaymentStatus.Paid)
         {
             throw new InvalidOperationException("Order is already paid");
@@ -72,6 +72,22 @@ public class PaymentService : IPaymentService
 
         var gateway = _resolver.GetActiveGateway();
 
+        // Check if payment session already exists for this order with the same provider
+        // This prevents creating duplicate checkout sessions
+        if (!string.IsNullOrEmpty(order.PaymentSessionId) &&
+            order.PaymentProvider == gateway.Name)
+        {
+            _logger.LogInformation(
+                "Order {OrderId} already has a payment session {SessionId} with {Provider}. Recreating.",
+                orderId, order.PaymentSessionId, gateway.Name);
+
+            // Option 1: Return error (uncomment if you want stricter behavior)
+            // throw new PaymentAlreadyInitiatedException($"Payment already initiated for order {orderId}");
+
+            // Option 2: Recreate session (current behavior - more user-friendly)
+            // User may have abandoned checkout and wants to try again
+        }
+
         var (checkoutUrl, sessionId) = await gateway.CreateCheckoutAsync(order, ct);
 
         // Update order with payment session info
@@ -80,8 +96,8 @@ public class PaymentService : IPaymentService
         await _dbContext.SaveChangesAsync(ct);
 
         _logger.LogInformation(
-            "Created checkout session for order {OrderId} using {Provider}",
-            orderId, gateway.Name);
+            "Created checkout session {SessionId} for order {OrderId} using {Provider}",
+            sessionId, orderId, gateway.Name);
 
         return checkoutUrl;
     }
@@ -97,4 +113,12 @@ public class PaymentService : IPaymentService
 
         await gateway.HandleWebhookAsync(request, ct);
     }
+}
+
+/// <summary>
+/// Exception thrown when a payment has already been initiated for an order.
+/// </summary>
+public class PaymentAlreadyInitiatedException : InvalidOperationException
+{
+    public PaymentAlreadyInitiatedException(string message) : base(message) { }
 }
