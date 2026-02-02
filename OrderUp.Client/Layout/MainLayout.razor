@@ -1,4 +1,10 @@
 ﻿@inherits LayoutComponentBase
+
+<BlazoredToasts Position="ToastPosition.BottomRight"
+    Timeout="3"
+    IconType="IconType.None"
+    ShowProgressBar="true" />
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,6 +12,7 @@
 
     <main>
         <div class="top-row px-4">
+            <a href="/orders" class="me-3">My Orders</a>
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 

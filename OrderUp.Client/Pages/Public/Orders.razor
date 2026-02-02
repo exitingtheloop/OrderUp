@@ -1,0 +1,164 @@
+@page "/orders"
+@using OrderUp.Client.Services
+@using OrderUp.Shared.Contracts.Orders.Responses
+@using OrderUp.Shared.Enums
+@inject RecentOrdersService RecentOrdersService
+@inject OrdersApi OrdersApi
+@inject NavigationManager Navigation
+
+<PageTitle>OrderUp - My Orders</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="mb-4">My Recent Orders</h1>
+
+    @if (_loading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading your orders...</p>
+        </div>
+    }
+    else if (_orders.Count == 0)
+    {
+        <div class="alert alert-info">
+            <h5>No orders yet</h5>
+            <p class="mb-2">Orders you place on this device will appear here.</p>
+            <a href="/" class="btn btn-primary">Browse Menu</a>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted mb-3">
+            Orders placed from this device. Your order history is stored locally.
+        </p>
+
+        <div class="list-group">
+            @foreach (var order in _orders)
+            {
+                <a href="/order-success/@order.Id" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="d-flex align-items-center mb-1">
+                                <strong class="me-2">Order #@order.Id</strong>
+                                <span class="badge @GetPaymentBadgeClass(order.PaymentStatus)">
+                                    @GetPaymentStatusText(order.PaymentStatus)
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                @order.CreatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold">?@order.Total.ToString("N2")</div>
+                            <small class="text-muted">@order.ItemCount item@(order.ItemCount != 1 ? "s" : "")</small>
+                        </div>
+                    </div>
+
+                    @if (order.PaymentStatus == PaymentStatus.Pending)
+                    {
+                        <div class="mt-2">
+                            <span class="badge bg-warning text-dark">
+                                Action needed: Complete payment
+                            </span>
+                        </div>
+                    }
+                </a>
+            }
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="/" class="btn btn-outline-primary">
+                ? Back to Menu
+            </a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<OrderSummaryDto> _orders = new();
+    private bool _loading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadOrders();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadOrders()
+    {
+        _loading = true;
+
+        try
+        {
+            var orderIds = await RecentOrdersService.GetOrderIdsAsync();
+            var orders = new List<OrderSummaryDto>();
+            var idsToRemove = new List<int>();
+
+            foreach (var orderId in orderIds)
+            {
+                try
+                {
+                    var order = await OrdersApi.GetOrderAsync(orderId);
+                    if (order is not null)
+                    {
+                        orders.Add(new OrderSummaryDto(
+                            order.Id,
+                            order.CustomerName,
+                            order.CreatedAtUtc,
+                            order.PickupTimeUtc,
+                            order.Status,
+                            order.PaymentStatus,
+                            order.Total,
+                            order.Items.Sum(i => i.Quantity)
+                        ));
+                    }
+                    else
+                    {
+                        // Order not found - mark for removal
+                        idsToRemove.Add(orderId);
+                    }
+                }
+                catch
+                {
+                    // Order fetch failed - mark for removal
+                    idsToRemove.Add(orderId);
+                }
+            }
+
+            // Clean up any invalid order IDs
+            foreach (var id in idsToRemove)
+            {
+                await RecentOrdersService.RemoveOrderAsync(id);
+            }
+
+            _orders = orders;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetPaymentBadgeClass(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "bg-warning text-dark",
+        PaymentStatus.Paid => "bg-success",
+        PaymentStatus.Failed => "bg-danger",
+        PaymentStatus.Refunded => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private static string GetPaymentStatusText(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "Unpaid",
+        PaymentStatus.Paid => "Paid",
+        PaymentStatus.Failed => "Failed",
+        PaymentStatus.Refunded => "Refunded",
+        _ => status.ToString()
+    };
+}

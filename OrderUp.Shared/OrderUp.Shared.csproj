@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Contracts\Menu\Responses\" />
-    <Folder Include="Contracts\Orders\Responses\" />
     <Folder Include="Contracts\Webhooks\" />
     <Folder Include="Validation\" />
   </ItemGroup>

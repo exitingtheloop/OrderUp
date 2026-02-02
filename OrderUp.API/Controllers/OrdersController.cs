@@ -34,8 +34,8 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<OrderDto>> GetOrder(int id)
     {
         var order = await _orderService.GetOrderAsync(id);
-    
-        if (order is null)  return NotFound();
+
+        if (order is null) return NotFound();
 
         return Ok(order);
     }
