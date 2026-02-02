@@ -97,7 +97,12 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
     app.UseWebAssemblyDebugging();
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in production
+// In development, we need HTTP for Stripe CLI webhook forwarding
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
