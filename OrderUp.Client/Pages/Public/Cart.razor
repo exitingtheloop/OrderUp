@@ -2,9 +2,12 @@
 @using OrderUp.Client.Services
 @using OrderUp.Client.State
 @using OrderUp.Shared.Contracts.Orders.Requests
+@using OrderUp.Shared.Enums
 @inject CartState CartState
 @inject OrdersApi OrdersApi
 @inject PaymentsApi PaymentsApi
+@inject PendingOrderService PendingOrderService
+@inject RecentOrdersService RecentOrdersService
 @inject NavigationManager Navigation
 
 <PageTitle>OrderUp - Cart</PageTitle>
@@ -12,11 +15,40 @@
 <div class="container">
     <h1 class="mb-4">Your Cart</h1>
 
+    @* Pending Order Banner *@
+    @if (_pendingOrder is not null && _pendingOrder.PaymentStatus == PaymentStatus.Pending)
+    {
+        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <strong>You have an unpaid order!</strong>
+                <span class="ms-2">Order #@_pendingOrder.Id - ₱@_pendingOrder.Total.ToString("N2")</span>
+            </div>
+            <div>
+                <a href="/order-success/@_pendingOrder.Id" class="btn btn-warning btn-sm me-2">
+                    Complete Payment
+                </a>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="DismissPendingOrder">
+                    Dismiss
+                </button>
+            </div>
+        </div>
+    }
+
     @if (CartState.IsEmpty)
     {
         <div class="alert alert-info">
             <p class="mb-2">Your cart is empty.</p>
             <a href="/" class="btn btn-primary">Browse Menu</a>
+        </div>
+
+        @* Link to recent orders *@
+        <div class="card mt-4">
+            <div class="card-body text-center">
+                <p class="text-muted mb-2">Looking for a previous order?</p>
+                <a href="/orders" class="btn btn-outline-primary">
+                    View My Recent Orders
+                </a>
+            </div>
         </div>
     }
     else
@@ -148,6 +180,49 @@
     private string? _errorMessage;
     private string _submitStatus = "Processing...";
 
+    // Pending order tracking
+    private OrderUp.Shared.Contracts.Orders.Responses.OrderDto? _pendingOrder;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadPendingOrder();
+            await LoadStoredPhone();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPendingOrder()
+    {
+        var pendingOrderId = await PendingOrderService.GetPendingOrderIdAsync();
+        if (pendingOrderId.HasValue)
+        {
+            _pendingOrder = await OrdersApi.GetOrderAsync(pendingOrderId.Value);
+
+            // Clear if the order no longer exists or is already paid
+            if (_pendingOrder is null || _pendingOrder.PaymentStatus != PaymentStatus.Pending)
+            {
+                await PendingOrderService.ClearPendingOrderAsync();
+                _pendingOrder = null;
+            }
+        }
+    }
+
+    private async Task LoadStoredPhone()
+    {
+        if (string.IsNullOrEmpty(_customerPhone))
+        {
+            _customerPhone = await PendingOrderService.GetStoredPhoneAsync();
+        }
+    }
+
+    private async Task DismissPendingOrder()
+    {
+        await PendingOrderService.ClearPendingOrderAsync();
+        _pendingOrder = null;
+    }
+
     private void IncreaseQuantity(CartItem item)
     {
         CartState.UpdateQuantity(item, item.Quantity + 1);
@@ -193,8 +268,8 @@
                     Addons: item.Addons.Select(a => new CreateOrderItemAddonRequest(
                         AddonId: a.AddonId,
                         Quantity: a.Quantity
-                        )).ToList()
                     )).ToList()
+                )).ToList()
             );
 
             var orderResponse = await OrdersApi.CreateOrderAsync(request);
@@ -206,6 +281,10 @@
             }
 
             var orderId = orderResponse.OrderId;
+
+            // Store in pending order AND recent orders
+            await PendingOrderService.SetPendingOrderAsync(orderId, _customerPhone.Trim());
+            await RecentOrdersService.AddOrderAsync(orderId);
 
             // Step 2: Create checkout session
             _submitStatus = "Redirecting to payment...";
