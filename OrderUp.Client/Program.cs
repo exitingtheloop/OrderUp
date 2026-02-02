@@ -1,3 +1,4 @@
+using Blazored.Toast;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using OrderUp.Client;
@@ -15,6 +16,9 @@ builder.Services.AddScoped<OrdersApi>();
 builder.Services.AddScoped<AdminApi>();
 builder.Services.AddScoped<AuthApi>();
 builder.Services.AddScoped<PaymentsApi>();
+builder.Services.AddScoped<PendingOrderService>();
+builder.Services.AddScoped<RecentOrdersService>();
+builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<CartState>();
 
