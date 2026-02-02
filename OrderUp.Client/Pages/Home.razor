@@ -4,6 +4,8 @@
 @using OrderUp.Shared.Contracts.Menu.Responses
 @inject MenuApi MenuApi
 @inject CartState Cart
+@inject IToastService ToastService
+@inject NavigationManager Navigation
 
 <PageTitle>OrderUp - Menu</PageTitle>
 
@@ -73,7 +75,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">@_selectedProduct.Name</h5>
-                    <button type="button" class="btn-close" @onclick="CloseCustomizer"></button>
+                    <button type="button" class="btn-close" @onclick="CloseCustomizer" disabled="@_isAdding"></button>
                 </div>
                 <div class="modal-body">
                     @* Size Selection (Required) *@
@@ -84,7 +86,8 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="variant" id="variant-@variant.Id"
                                        checked="@(_selectedVariantId == variant.Id)"
-                                       @onchange="() => SelectVariant(variant.Id)">
+                                       @onchange="() => SelectVariant(variant.Id)"
+                                       disabled="@_isAdding">
                                 <label class="form-check-label" for="variant-@variant.Id">
                                     @variant.Name - ₱@variant.Price.ToString("N2")
                                 </label>
@@ -92,7 +95,7 @@
                         }
                     </div>
 
-                    @* Addons (Optional) - Now using product-specific allowed addons *@
+                    @* Addons (Optional) *@
                     @if (_selectedProduct.AllowedAddons.Count > 0)
                     {
                         var addonGroups = _selectedProduct.AllowedAddons.GroupBy(a => a.Group);
@@ -110,7 +113,7 @@
                                         <div class="btn-group btn-group-sm">
                                             <button class="btn btn-outline-secondary"
                                                     @onclick="() => DecreaseAddon(addon)"
-                                                    disabled="@(currentQty == 0)">
+                                                    disabled="@(currentQty == 0 || _isAdding)">
                                                 −
                                             </button>
                                             <span class="btn btn-outline-secondary disabled" style="min-width: 40px;">
@@ -118,7 +121,7 @@
                                             </span>
                                             <button class="btn btn-outline-secondary"
                                                     @onclick="() => IncreaseAddon(addon)"
-                                                    disabled="@(currentQty >= maxQty)">
+                                                    disabled="@(currentQty >= maxQty || _isAdding)">
                                                 +
                                             </button>
                                         </div>
@@ -132,19 +135,33 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Special Instructions</label>
                         <textarea class="form-control" rows="2" placeholder="Any special requests?"
-                                  @bind="_notes"></textarea>
+                                  @bind="_notes" disabled="@_isAdding"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <div class="me-auto">
                         <strong>Total: ₱@CalculateItemTotal().ToString("N2")</strong>
                     </div>
-                    <button type="button" class="btn btn-secondary" @onclick="CloseCustomizer">Cancel</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseCustomizer" disabled="@_isAdding">
+                        Cancel
+                    </button>
                     <button type="button"
-                            class="btn btn-primary"
+                            class="btn @(_addedSuccess ? "btn-success" : "btn-primary")"
                             @onclick="AddToCart"
-                            disabled="@(_selectedVariantId is null)">
-                        Add to Cart
+                            disabled="@(_selectedVariantId is null || _isAdding)">
+                        @if (_isAdding)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Adding...</span>
+                        }
+                        else if (_addedSuccess)
+                        {
+                            <span>Added!</span>
+                        }
+                        else
+                        {
+                            <span>Add to Cart</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -161,6 +178,10 @@
     private int? _selectedVariantId;
     private Dictionary<int, int> _selectedAddons = new();
     private string? _notes;
+
+    // Add-to-cart feedback state
+    private bool _isAdding = false;
+    private bool _addedSuccess = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,6 +201,8 @@
         _selectedVariantId = product.Variants.FirstOrDefault(v => v.IsDefault)?.Id ?? product.Variants.FirstOrDefault()?.Id;
         _selectedAddons.Clear();
         _notes = null;
+        _addedSuccess = false;
+        _isAdding = false;
     }
 
     private void CloseCustomizer()
@@ -188,6 +211,8 @@
         _selectedVariantId = null;
         _selectedAddons.Clear();
         _notes = null;
+        _addedSuccess = false;
+        _isAdding = false;
     }
 
     private void SelectVariant(int variantId)
@@ -240,10 +265,13 @@
         return total;
     }
 
-    private void AddToCart()
+    private async Task AddToCart()
     {
-        if (_selectedProduct is null || _selectedVariantId is null)
+        if (_selectedProduct is null || _selectedVariantId is null || _isAdding)
             return;
+
+        _isAdding = true;
+        StateHasChanged();
 
         var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
 
@@ -274,6 +302,19 @@
         };
 
         Cart.AddItem(cartItem);
+
+        // Show success state on button
+        _addedSuccess = true;
+        _isAdding = false;
+        StateHasChanged();
+
+        // Show toast
+        var productName = _selectedProduct.Name;
+        var variantName = variant.Name;
+        ToastService.ShowSuccess($"Added to cart: {productName} ({variantName})");
+
+        // Wait briefly to show success state, then close modal
+        await Task.Delay(800);
         CloseCustomizer();
     }
 }
