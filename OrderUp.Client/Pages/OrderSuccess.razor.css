@@ -1,0 +1,256 @@
+/* ========================================
+   Order Success Page - Premium Styling
+   ======================================== */
+
+.order-page {
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.loading-state {
+    padding: var(--space-16) 0;
+    display: flex;
+    justify-content: center;
+}
+
+/* ----------------------------------------
+   Status Banners
+   ---------------------------------------- */
+.status-callout {
+    margin-bottom: var(--space-8);
+}
+
+.status-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-8);
+}
+
+.status-banner-processing {
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+
+.status-banner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.status-banner-title {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text);
+}
+
+.status-banner-text {
+    font-size: var(--text-sm);
+    color: var(--muted);
+}
+
+/* ----------------------------------------
+   Order Card
+   ---------------------------------------- */
+.order-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+
+.order-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border-bottom: 1px solid var(--divider);
+}
+
+.order-number {
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
+    color: var(--text);
+    margin: 0;
+}
+
+.order-badges {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.order-card-body {
+    padding: var(--space-5);
+}
+
+.order-card-footer {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface-hover);
+    border-top: 1px solid var(--divider);
+}
+
+/* ----------------------------------------
+   Info Grid
+   ---------------------------------------- */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.info-label {
+    font-size: 11px;
+    font-weight: var(--font-medium);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.info-value {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text);
+}
+
+/* ----------------------------------------
+   Items List
+   ---------------------------------------- */
+.items-heading {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text);
+    margin: 0 0 var(--space-3) 0;
+}
+
+.items-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.order-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--divider);
+}
+
+.order-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.order-item-qty {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--muted);
+    flex-shrink: 0;
+    min-width: 28px;
+}
+
+.order-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.order-item-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text);
+}
+
+.order-item-variant {
+    font-size: var(--text-xs);
+    color: var(--muted);
+}
+
+.order-item-addons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+}
+
+.addon-tag {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    background: var(--surface-active);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.order-item-notes {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    font-style: italic;
+    margin-top: var(--space-1);
+}
+
+.order-item-price {
+    flex-shrink: 0;
+}
+
+/* ----------------------------------------
+   Order Total
+   ---------------------------------------- */
+.order-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.order-total-label {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+}
+
+/* ----------------------------------------
+   Payment Action
+   ---------------------------------------- */
+.payment-action {
+    margin-top: var(--space-6);
+}
+
+.w-full {
+    width: 100%;
+}
+
+/* ----------------------------------------
+   Responsive
+   ---------------------------------------- */
+@media (max-width: 480px) {
+    .info-grid {
+        gap: var(--space-3);
+    }
+    
+    .order-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .order-card-footer {
+        flex-direction: column;
+    }
+
+    .order-card-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -1,23 +1,18 @@
 ﻿@inherits LayoutComponentBase
 
 <BlazoredToasts Position="ToastPosition.BottomRight"
-    Timeout="3"
-    IconType="IconType.None"
-    ShowProgressBar="true" />
+                Timeout="3"
+                IconType="IconType.None"
+                ShowProgressBar="false" />
 
-<div class="page">
-    <div class="sidebar">
+<div class="app-shell">
+    <aside class="app-sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="/orders" class="me-3">My Orders</a>
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    <main class="app-main">
+        <div class="app-content">
             @Body
-        </article>
+        </div>
     </main>
 </div>

@@ -1,0 +1,51 @@
+@*
+ Badge Component
+    Compact status indicators with semantic colors.
+ 
+    Usage:
+    <Badge Variant="BadgeVariant.Success">Paid</Badge>
+    <Badge Variant="BadgeVariant.Warning">Pending</Badge>
+*@
+
+<span class="@BadgeClasses">@ChildContent</span>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public BadgeVariant Variant { get; set; } = BadgeVariant.Neutral;
+
+    [Parameter]
+    public bool Pill { get; set; } = true;
+
+    private string BadgeClasses
+    {
+        get
+        {
+            var baseClass = Pill ? "status-pill" : "badge";
+            var variantClass = Variant switch
+            {
+                BadgeVariant.Neutral => $"{baseClass}-neutral",
+                BadgeVariant.Success => $"{baseClass}-success",
+                BadgeVariant.Warning => "badge-warning", // Only badge has warning
+                BadgeVariant.Danger => $"{baseClass}-error",
+                BadgeVariant.Info => "badge-info",
+                BadgeVariant.Pending => $"{baseClass}-pending",
+                _ => $"{baseClass}-neutral"
+            };
+
+            return $"{baseClass} {variantClass}";
+        }
+    }
+
+    public enum BadgeVariant
+    {
+        Neutral,
+        Success,
+        Warning,
+        Danger,
+        Info,
+        Pending
+    }
+}

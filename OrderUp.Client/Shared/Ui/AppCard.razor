@@ -1,0 +1,55 @@
+@*
+  AppCard Component
+    A standard surface container with consistent styling.
+ 
+    Usage:
+    <AppCard>Content here</AppCard>
+    <AppCard Interactive="true">Clickable card</AppCard>
+    <AppCard Header="Section Title">Content</AppCard>
+*@
+
+<div class="@CardClasses" @onclick="OnClick" @attributes="AdditionalAttributes">
+    @if (!string.IsNullOrEmpty(Header))
+    {
+        <div class="card-header">
+            <span class="card-header-title">@Header</span>
+            @HeaderContent
+        </div>
+    }
+
+    <div class="card-body">
+        @ChildContent
+    </div>
+
+    @if (FooterContent is not null)
+    {
+        <div class="card-footer">
+            @FooterContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? FooterContent { get; set; }
+
+    [Parameter]
+    public string? Header { get; set; }
+
+    [Parameter]
+    public bool Interactive { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string CardClasses => Interactive? "card card-interactive" : "card";
+}

@@ -1,0 +1,106 @@
+@*
+    AppButton Component
+    Consistent button styling with variants and sizes.
+ 
+    Usage:
+    <AppButton>Default</AppButton>
+    <AppButton Variant="ButtonVariant.Primary" Size="ButtonSize.Large">Submit</AppButton>
+    <AppButton Variant="ButtonVariant.Ghost" OnClick="HandleClick">Cancel</AppButton>
+*@
+
+@if (!string.IsNullOrEmpty(Href))
+{
+    <a href="@Href" class="@ButtonClasses" @attributes="AdditionalAttributes">
+        @if (Loading)
+        {
+            <span class="spinner spinner-sm"></span>
+        }
+        @ChildContent
+    </a>
+}
+else
+{
+    <button type="@Type" class="@ButtonClasses" disabled="@(Disabled || Loading)" @onclick="OnClick" @attributes="AdditionalAttributes">
+        @if (Loading)
+        {
+            <span class="spinner spinner-sm"></span>
+        }
+        @ChildContent
+    </button>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    [Parameter]
+    public string Type { get; set; } = "button";
+
+    [Parameter]
+    public string? Href { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    [Parameter]
+    public bool Loading { get; set; } = false;
+
+    [Parameter]
+    public bool FullWidth { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string ButtonClasses
+    {
+        get
+        {
+            var classes = new List<string> { "btn" };
+
+            classes.Add(Variant switch
+            {
+                ButtonVariant.Primary => "btn-primary",
+                ButtonVariant.Secondary => "btn-secondary",
+                ButtonVariant.Ghost => "btn-ghost",
+                ButtonVariant.Danger => "btn-danger",
+                _ => "btn-primary"
+            });
+
+            classes.Add(Size switch
+            {
+                ButtonSize.Small => "btn-sm",
+                ButtonSize.Medium => "btn-md",
+                ButtonSize.Large => "btn-lg",
+                _ => "btn-md"
+            });
+
+            if (FullWidth) classes.Add("w-full");
+
+            return string.Join(" ", classes);
+        }
+    }
+
+    public enum ButtonVariant
+    {
+        Primary,
+        Secondary,
+        Ghost,
+        Danger
+    }
+
+    public enum ButtonSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+}

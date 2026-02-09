@@ -1,0 +1,32 @@
+/* ProductImage Component Styles */
+
+.product-image {
+    flex-shrink: 0;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface-active);
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image.placeholder-image-sm,
+.placeholder-image-sm {
+    width: 48px;
+    height: 48px;
+}
+
+.product-image.placeholder-image-md,
+.placeholder-image-md {
+    width: 64px;
+    height: 64px;
+}
+
+.product-image.placeholder-image-lg,
+.placeholder-image-lg {
+    width: 120px;
+    height: 120px;
+}

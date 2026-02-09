@@ -1,0 +1,88 @@
+@*
+    Callout Component
+  Subtle informational panels - NOT bright yellow blocks.
+ 
+    Usage:
+    <Callout Variant="CalloutVariant.Info" Title="Note">Some helpful info.</Callout>
+    <Callout Variant="CalloutVariant.Success">Payment complete!</Callout>
+*@
+
+<div class="@CalloutClasses" role="alert">
+    <div class="callout-icon">
+        @switch (Variant)
+        {
+            case CalloutVariant.Success:
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                break;
+            case CalloutVariant.Warning:
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                break;
+            case CalloutVariant.Danger:
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                break;
+            default:
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                break;
+        }
+    </div>
+    <div class="callout-content">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <p class="callout-title">@Title</p>
+        }
+        @if (ChildContent is not null)
+        {
+            <div class="callout-text">@ChildContent</div>
+        }
+    </div>
+    @if (Dismissible)
+    {
+        <button type="button" class="callout-dismiss" @onclick="OnDismiss">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public CalloutVariant Variant { get; set; } = CalloutVariant.Info;
+
+    [Parameter]
+    public bool Dismissible { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    private string CalloutClasses => Variant switch
+    {
+        CalloutVariant.Info => "callout callout-info",
+        CalloutVariant.Success => "callout callout-success",
+        CalloutVariant.Warning => "callout callout-warning",
+        CalloutVariant.Danger => "callout callout-danger",
+        _ => "callout"
+    };
+
+    public enum CalloutVariant
+    {
+        Info,
+        Success,
+        Warning,
+        Danger
+    }
+}

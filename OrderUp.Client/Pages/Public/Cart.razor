@@ -1,7 +1,10 @@
 ﻿@page "/cart"
 @using OrderUp.Client.Services
 @using OrderUp.Client.State
+@using OrderUp.Client.Components
+@using OrderUp.Client.Shared.Ui
 @using OrderUp.Shared.Contracts.Orders.Requests
+@using OrderUp.Shared.Contracts.Orders.Responses
 @using OrderUp.Shared.Enums
 @inject CartState CartState
 @inject OrdersApi OrdersApi
@@ -12,159 +15,158 @@
 
 <PageTitle>OrderUp - Cart</PageTitle>
 
-<div class="container">
-    <h1 class="mb-4">Your Cart</h1>
+<div class="cart-page">
+    <header class="page-header">
+        <h1 class="page-title">Cart</h1>
+    </header>
 
-    @* Pending Order Banner *@
-    @if (_pendingOrder is not null && _pendingOrder.PaymentStatus == PaymentStatus.Pending)
+    @* Unpaid Orders - Subtle Callout *@
+    @if (_unpaidOrders.Count > 0)
     {
-        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <strong>You have an unpaid order!</strong>
-                <span class="ms-2">Order #@_pendingOrder.Id - ₱@_pendingOrder.Total.ToString("N2")</span>
-            </div>
-            <div>
-                <a href="/order-success/@_pendingOrder.Id" class="btn btn-warning btn-sm me-2">
-                    Complete Payment
-                </a>
-                <button class="btn btn-outline-secondary btn-sm" @onclick="DismissPendingOrder">
-                    Dismiss
-                </button>
-            </div>
+        <div class="unpaid-orders-callout">
+            <Callout Variant="Callout.CalloutVariant.Warning" Title="@(_unpaidOrders.Count == 1 ? "You have an unpaid order" : $"You have {_unpaidOrders.Count} unpaid orders")">
+                <div class="unpaid-orders-list">
+                    @foreach (var order in _unpaidOrders)
+                    {
+                        <a href="/order-success/@order.Id" class="unpaid-order-item">
+                            <div class="unpaid-order-info">
+                                <span class="unpaid-order-id">Order #@order.Id</span>
+                                <span class="unpaid-order-date">@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                            </div>
+                            <div class="unpaid-order-right">
+                                <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
+                                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 5l7 7-7 7" />
+                                </svg>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </Callout>
         </div>
     }
 
     @if (CartState.IsEmpty)
     {
-        <div class="alert alert-info">
-            <p class="mb-2">Your cart is empty.</p>
-            <a href="/" class="btn btn-primary">Browse Menu</a>
-        </div>
-
-        @* Link to recent orders *@
-        <div class="card mt-4">
-            <div class="card-body text-center">
-                <p class="text-muted mb-2">Looking for a previous order?</p>
-                <a href="/orders" class="btn btn-outline-primary">
-                    View My Recent Orders
-                </a>
+        <EmptyState IconType="EmptyState.EmptyIcon.Cart"
+                    Title="Your cart is empty"
+                    Description="Browse our menu and add items to get started.">
+            <div class="empty-actions">
+                <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
+                <a href="/orders" class="btn btn-secondary btn-md">View Orders</a>
             </div>
-        </div>
+        </EmptyState>
     }
     else
     {
         @* Cart Items *@
-        <div class="card mb-4">
-            <div class="card-header">
-                <strong>Items (@CartState.ItemCount)</strong>
-            </div>
-            <ul class="list-group list-group-flush">
+        <section class="cart-section">
+            <div class="cart-items">
                 @foreach (var item in CartState.Items)
                 {
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1">@item.ProductName</h6>
-                                <small class="text-muted">@item.VariantName - ₱@item.BaseUnitPrice.ToString("N2")</small>
-
-                                @if (item.Addons.Count > 0)
-                                {
-                                    <div class="mt-1">
-                                        @foreach (var addon in item.Addons)
-                                        {
-                                            <span class="badge bg-secondary me-1">
-                                                @(addon.Quantity > 1 ? $"{addon.Quantity}x " : "")@addon.Name (+₱@((addon.UnitPrice * addon.Quantity).ToString("N2")))
-                                            </span>
-                                        }
-                                    </div>
-                                }
-
-                                @if (!string.IsNullOrEmpty(item.Notes))
-                                {
-                                    <div class="mt-1">
-                                        <small class="text-muted fst-italic">Note: @item.Notes</small>
-                                    </div>
-                                }
+                    <div class="cart-item">
+                        <PlaceholderImage Size="PlaceholderImage.PlaceholderSize.Medium" Alt="@item.ProductName" />
+                        <div class="cart-item-content">
+                            <div class="cart-item-header">
+                                <span class="cart-item-name">@item.ProductName</span>
+                                <span class="cart-item-price">
+                                    <PriceDisplay Amount="@item.LineTotal" Size="PriceDisplay.PriceSize.Base" />
+                                </span>
                             </div>
-                            <div class="text-end ms-3">
-                                <div class="btn-group btn-group-sm mb-1">
-                                    <button class="btn btn-outline-secondary" @onclick="() => DecreaseQuantity(item)">−</button>
-                                    <span class="btn btn-outline-secondary disabled" style="min-width: 40px;">@item.Quantity</span>
-                                    <button class="btn btn-outline-secondary" @onclick="() => IncreaseQuantity(item)">+</button>
+                            <span class="cart-item-variant">@item.VariantName</span>
+
+                            @if (item.Addons.Count > 0)
+                            {
+                                <div class="cart-item-addons">
+                                    @foreach (var addon in item.Addons)
+                                    {
+                                        <span class="addon-tag">@(addon.Quantity > 1 ? $"{addon.Quantity}× " : "")@addon.Name</span>
+                                    }
                                 </div>
-                                <div class="fw-bold">₱@item.LineTotal.ToString("N2")</div>
-                                <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => RemoveItem(item)">Remove</button>
+                            }
+
+                            @if (!string.IsNullOrEmpty(item.Notes))
+                            {
+                                <div class="cart-item-notes">"@item.Notes"</div>
+                            }
+
+                            <div class="cart-item-controls">
+                                <QuantityStepper Value="@item.Quantity"
+                                                 Min="1"
+                                                 OnChange="(qty) => UpdateQuantity(item, qty)" />
+                                <button type="button" class="remove-btn" @onclick="() => RemoveItem(item)">Remove</button>
                             </div>
                         </div>
-                    </li>
+                    </div>
                 }
-            </ul>
-            <div class="card-footer d-flex justify-content-between">
-                <span>Total</span>
-                <strong>₱@CartState.Total().ToString("N2")</strong>
             </div>
-        </div>
+
+            <div class="cart-summary">
+                <div class="cart-total-row">
+                    <span class="cart-total-label">Total</span>
+                    <PriceDisplay Amount="@CartState.Total()" Size="PriceDisplay.PriceSize.ExtraLarge" />
+                </div>
+            </div>
+        </section>
 
         @* Customer Information *@
-        <div class="card mb-4">
-            <div class="card-header">
-                <strong>Your Information</strong>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="customerName" class="form-label">Name <span class="text-danger">*</span></label>
+        <section class="form-section">
+            <h2 class="section-heading">Your details</h2>
+
+            <div class="form-card">
+                <div class="form-group">
+                    <label class="label">Name <span class="required">*</span></label>
                     <input type="text"
-                           class="form-control @(string.IsNullOrWhiteSpace(_customerName) && _submitted ? "is-invalid" : "")"
-                           id="customerName"
-                           placeholder="Enter your name"
+                           class="input @(string.IsNullOrWhiteSpace(_customerName) && _submitted ? "is-invalid" : "")"
+                           placeholder="Your name"
                            @bind="_customerName">
                     @if (string.IsNullOrWhiteSpace(_customerName) && _submitted)
                     {
-                        <div class="invalid-feedback">Name is required.</div>
+                        <div class="error-text">Name is required</div>
                     }
                 </div>
-                <div class="mb-3">
-                    <label for="customerPhone" class="form-label">Phone <span class="text-danger">*</span></label>
+
+                <div class="form-group">
+                    <label class="label">Phone <span class="required">*</span></label>
                     <input type="tel"
-                           class="form-control @(string.IsNullOrWhiteSpace(_customerPhone) && _submitted ? "is-invalid" : "")"
-                           id="customerPhone"
-                           placeholder="Enter your phone number"
+                           class="input @(string.IsNullOrWhiteSpace(_customerPhone) && _submitted ? "is-invalid" : "")"
+                           placeholder="Your phone number"
                            @bind="_customerPhone">
                     @if (string.IsNullOrWhiteSpace(_customerPhone) && _submitted)
                     {
-                        <div class="invalid-feedback">Phone is required.</div>
+                        <div class="error-text">Phone is required</div>
                     }
                 </div>
-                <div class="mb-3">
-                    <label for="pickupTime" class="form-label">Pickup Time (optional)</label>
+
+                <div class="form-group">
+                    <label class="label">Pickup time <span class="optional">(optional)</span></label>
                     <input type="datetime-local"
-                           class="form-control"
-                           id="pickupTime"
+                           class="input"
                            min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
                            @bind="_pickupTime">
-                    <div class="form-text">Leave blank for ASAP pickup.</div>
+                    <div class="hint">Leave blank for ASAP pickup</div>
                 </div>
             </div>
-        </div>
+        </section>
 
         @* Error Message *@
         @if (!string.IsNullOrEmpty(_errorMessage))
         {
-            <div class="alert alert-danger">@_errorMessage</div>
+            <Callout Variant="Callout.CalloutVariant.Danger">@_errorMessage</Callout>
         }
 
         @* Actions *@
-        <div class="d-flex justify-content-between mb-4">
-            <a href="/" class="btn btn-outline-secondary">Continue Shopping</a>
-            <button class="btn btn-primary" @onclick="SubmitOrder" disabled="@_submitting">
+        <div class="page-actions">
+            <a href="/" class="btn btn-secondary btn-md">Continue shopping</a>
+            <button class="btn btn-primary btn-lg" @onclick="SubmitOrder" disabled="@_submitting">
                 @if (_submitting)
                 {
-                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <span class="spinner spinner-sm"></span>
                     <span>@_submitStatus</span>
                 }
                 else
                 {
-                    <span>Place Order & Pay</span>
+                    <span>Place order</span>
                 }
             </button>
         </div>
@@ -179,34 +181,37 @@
     private bool _submitting;
     private string? _errorMessage;
     private string _submitStatus = "Processing...";
-
-    // Pending order tracking
-    private OrderUp.Shared.Contracts.Orders.Responses.OrderDto? _pendingOrder;
+    private List<OrderDto> _unpaidOrders = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadPendingOrder();
+            await LoadUnpaidOrders();
             await LoadStoredPhone();
             StateHasChanged();
         }
     }
 
-    private async Task LoadPendingOrder()
+    private async Task LoadUnpaidOrders()
     {
-        var pendingOrderId = await PendingOrderService.GetPendingOrderIdAsync();
-        if (pendingOrderId.HasValue)
-        {
-            _pendingOrder = await OrdersApi.GetOrderAsync(pendingOrderId.Value);
+        var orderIds = await RecentOrdersService.GetOrderIdsAsync();
+        var unpaidOrders = new List<OrderDto>();
 
-            // Clear if the order no longer exists or is already paid
-            if (_pendingOrder is null || _pendingOrder.PaymentStatus != PaymentStatus.Pending)
+        foreach (var orderId in orderIds)
+        {
+            try
             {
-                await PendingOrderService.ClearPendingOrderAsync();
-                _pendingOrder = null;
+                var order = await OrdersApi.GetOrderAsync(orderId);
+                if (order?.PaymentStatus == PaymentStatus.Pending)
+                {
+                    unpaidOrders.Add(order);
+                }
             }
+            catch { }
         }
+
+        _unpaidOrders = unpaidOrders;
     }
 
     private async Task LoadStoredPhone()
@@ -217,20 +222,9 @@
         }
     }
 
-    private async Task DismissPendingOrder()
+    private void UpdateQuantity(CartItem item, int quantity)
     {
-        await PendingOrderService.ClearPendingOrderAsync();
-        _pendingOrder = null;
-    }
-
-    private void IncreaseQuantity(CartItem item)
-    {
-        CartState.UpdateQuantity(item, item.Quantity + 1);
-    }
-
-    private void DecreaseQuantity(CartItem item)
-    {
-        CartState.UpdateQuantity(item, item.Quantity - 1);
+        CartState.UpdateQuantity(item, quantity);
     }
 
     private void RemoveItem(CartItem item)
@@ -243,7 +237,6 @@
         _submitted = true;
         _errorMessage = null;
 
-        // Validate required fields
         if (string.IsNullOrWhiteSpace(_customerName) || string.IsNullOrWhiteSpace(_customerPhone))
         {
             return;
@@ -255,7 +248,6 @@
 
         try
         {
-            // Step 1: Create the order
             var request = new CreateOrderRequest(
                 CustomerName: _customerName.Trim(),
                 CustomerPhone: _customerPhone.Trim(),
@@ -269,7 +261,7 @@
                         AddonId: a.AddonId,
                         Quantity: a.Quantity
                     )).ToList()
-                )).ToList()
+               )).ToList()
             );
 
             var orderResponse = await OrdersApi.CreateOrderAsync(request);
@@ -281,12 +273,9 @@
             }
 
             var orderId = orderResponse.OrderId;
-
-            // Store in pending order AND recent orders
             await PendingOrderService.SetPendingOrderAsync(orderId, _customerPhone.Trim());
             await RecentOrdersService.AddOrderAsync(orderId);
 
-            // Step 2: Create checkout session
             _submitStatus = "Redirecting to payment...";
             StateHasChanged();
 
@@ -294,7 +283,6 @@
 
             if (string.IsNullOrEmpty(checkoutUrl))
             {
-                // Payment creation failed - redirect to order page where they can retry
                 _errorMessage = "Failed to initiate payment. Redirecting to order page...";
                 StateHasChanged();
                 await Task.Delay(1500);
@@ -303,10 +291,7 @@
                 return;
             }
 
-            // Success! Clear cart and redirect to payment provider
             CartState.Clear();
-
-            // Force full navigation to external payment page
             Navigation.NavigateTo(checkoutUrl, forceLoad: true);
         }
         catch (Exception ex)

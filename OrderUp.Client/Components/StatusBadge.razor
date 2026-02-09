@@ -1,0 +1,31 @@
+@*
+    StatusBadge Component
+    Quiet, sophisticated status pills using design system.
+*@
+
+<span class="status-pill @StatusClass">@Text</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public StatusType Status { get; set; }
+
+    private string StatusClass => Status switch
+    {
+        StatusType.Success => "status-pill-success",
+        StatusType.Pending => "status-pill-pending",
+        StatusType.Error => "status-pill-error",
+        StatusType.Neutral => "status-pill-neutral",
+        _ => "status-pill-neutral"
+    };
+
+    public enum StatusType
+    {
+        Neutral,
+        Success,
+        Pending,
+        Error
+    }
+}

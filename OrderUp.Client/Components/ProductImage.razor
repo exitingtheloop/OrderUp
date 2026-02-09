@@ -1,0 +1,47 @@
+@*
+    ProductImage Component
+    Shows product image if available, otherwise a sophisticated placeholder.
+*@
+
+@if (!string.IsNullOrEmpty(Url))
+{
+    <div class="product-image @SizeClass">
+        <img src="@Url" alt="@Alt" loading="lazy" />
+    </div>
+}
+else
+{
+    <div class="placeholder-image @SizeClass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+        </svg>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Url { get; set; }
+
+    [Parameter]
+    public string Alt { get; set; } = "Product";
+
+    [Parameter]
+    public ImageSize Size { get; set; } = ImageSize.Medium;
+
+    private string SizeClass => Size switch
+    {
+        ImageSize.Small => "placeholder-image-sm",
+        ImageSize.Medium => "placeholder-image-md",
+        ImageSize.Large => "placeholder-image-lg",
+        _ => "placeholder-image-md"
+    };
+
+    public enum ImageSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+}

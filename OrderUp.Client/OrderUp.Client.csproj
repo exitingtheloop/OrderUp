@@ -16,8 +16,4 @@
     <ProjectReference Include="..\OrderUp.Shared\OrderUp.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Shared\" />
-  </ItemGroup>
-
 </Project>

@@ -1,69 +1,89 @@
 @page "/admin/login"
 @using OrderUp.Client.State
+@using OrderUp.Client.Shared.Ui
 @inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<PageTitle>Admin Login</PageTitle>
+<PageTitle>Admin Login - OrderUp</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Admin Login</h4>
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1 class="login-title">Admin Login</h1>
+                <p class="login-subtitle">Sign in to manage orders</p>
             </div>
-            <div class="card-body">
-                @if (!string.IsNullOrEmpty(errorMessage))
+
+            <div class="login-body">
+                @if (!string.IsNullOrEmpty(_errorMessage))
                 {
-                    <div class="alert alert-danger">@errorMessage</div>
+                    <Callout Variant="Callout.CalloutVariant.Danger">@_errorMessage</Callout>
                 }
 
-                <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
                     <DataAnnotationsValidator />
 
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <InputText id="email" class="form-control" @bind-Value="loginModel.Email" />
-                        <ValidationMessage For="@(() => loginModel.Email)" />
+                    <div class="form-group">
+                        <label class="label" for="email">Email</label>
+                        <InputText id="email"
+                                   class="input"
+                                   placeholder="admin@example.com"
+                                   @bind-Value="_loginModel.Email" />
+                        <ValidationMessage For="@(() => _loginModel.Email)" class="error-text" />
                     </div>
 
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
-                        <ValidationMessage For="@(() => loginModel.Password)" />
+                    <div class="form-group">
+                        <label class="label" for="password">Password</label>
+                        <InputText id="password"
+                                   type="password"
+                                   class="input"
+                                   placeholder="Your password"
+                                   @bind-Value="_loginModel.Password" />
+                        <ValidationMessage For="@(() => _loginModel.Password)" class="error-text" />
                     </div>
 
-                    <div class="mb-3 form-check">
-                        <InputCheckbox id="rememberMe" class="form-check-input" @bind-Value="loginModel.RememberMe" />
-                        <label for="rememberMe" class="form-check-label">Remember me</label>
+                    <div class="form-group-inline">
+                        <label class="checkbox-label">
+                            <InputCheckbox class="checkbox-input" @bind-Value="_loginModel.RememberMe" />
+                            <span class="checkbox-text">Remember me</span>
+                        </label>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100" disabled="@isLoggingIn">
-                        @if (isLoggingIn)
+                    <button type="submit" class="btn btn-primary btn-lg w-full" disabled="@_isLoggingIn">
+                        @if (_isLoggingIn)
                         {
-                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span class="spinner spinner-sm"></span>
+                            <span>Signing in...</span>
                         }
-                        Login
+                        else
+                        {
+                            <span>Sign in</span>
+                        }
                     </button>
                 </EditForm>
             </div>
         </div>
 
-        <div class="mt-3 text-center">
-            <a href="/" class="text-muted">? Back to Menu</a>
+        <div class="login-footer">
+            <a href="/" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                Back to Menu
+            </a>
         </div>
     </div>
 </div>
 
 @code {
-    private LoginModel loginModel = new();
-    private bool isLoggingIn = false;
-    private string? errorMessage;
+    private LoginModel _loginModel = new();
+    private bool _isLoggingIn = false;
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await AuthState.InitializeAsync();
 
-        // If already authenticated as admin, redirect to orders
         if (AuthState.IsAdmin)
         {
             Navigation.NavigateTo("/admin/orders");
@@ -72,33 +92,32 @@
 
     private async Task HandleLogin()
     {
-        isLoggingIn = true;
-        errorMessage = null;
+        _isLoggingIn = true;
+        _errorMessage = null;
 
         try
         {
             var result = await AuthState.LoginAsync(
-                loginModel.Email,
-                loginModel.Password,
-                loginModel.RememberMe);
+                     _loginModel.Email,
+             _loginModel.Password,
+           _loginModel.RememberMe);
 
             if (result.Success)
             {
-                // Redirect to admin orders on successful login
                 Navigation.NavigateTo("/admin/orders");
             }
             else
             {
-                errorMessage = result.ErrorMessage ?? "Login failed.";
+                _errorMessage = result.ErrorMessage ?? "Invalid email or password.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            _errorMessage = $"An error occurred: {ex.Message}";
         }
         finally
         {
-            isLoggingIn = false;
+            _isLoggingIn = false;
         }
     }
 
