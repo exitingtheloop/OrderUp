@@ -19,7 +19,9 @@ public class SettingsController : ControllerBase
     {
         var currencySymbol = _configuration["AppSettings:CurrencySymbol"] ?? "₱";
         var currencyCode = _configuration["AppSettings:CurrencyCode"] ?? "PHP";
+        var cafeName = _configuration["AppSettings:CafeName"] ?? "OrderUp Cafe";
+        var receiptFooter = _configuration["AppSettings:ReceiptFooter"] ?? "Thank you for your order!";
 
-        return Ok(new AppSettingsResponse(currencySymbol, currencyCode));
+        return Ok(new AppSettingsResponse(currencySymbol, currencyCode, cafeName, receiptFooter));
     }
 }

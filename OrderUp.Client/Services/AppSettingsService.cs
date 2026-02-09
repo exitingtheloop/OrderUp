@@ -1,4 +1,4 @@
-using OrderUp.Shared.Contracts;
+﻿using OrderUp.Shared.Contracts;
 using System.Net.Http.Json;
 
 namespace OrderUp.Client.Services;
@@ -17,8 +17,10 @@ public class AppSettingsService
     private static readonly object _lock = new();
 
     // Default fallback values
-    private const string DefaultCurrencySymbol = "?";
+    private const string DefaultCurrencySymbol = "₱";
     private const string DefaultCurrencyCode = "PHP";
+    private const string DefaultCafeName = "OrderUp Cafe";
+    private const string DefaultReceiptFooter = "Thank you for your order!";
 
     public AppSettingsService(HttpClient httpClient)
     {
@@ -27,6 +29,8 @@ public class AppSettingsService
 
     public string CurrencySymbol => _cachedSettings?.CurrencySymbol ?? DefaultCurrencySymbol;
     public string CurrencyCode => _cachedSettings?.CurrencyCode ?? DefaultCurrencyCode;
+    public string CafeName => _cachedSettings?.CafeName ?? DefaultCafeName;
+    public string ReceiptFooter => _cachedSettings?.ReceiptFooter ?? DefaultReceiptFooter;
 
     public async Task InitializeAsync()
     {
@@ -53,7 +57,7 @@ public class AppSettingsService
             // Use defaults if API call fails
             lock (_lock)
             {
-                _cachedSettings = new AppSettingsResponse(DefaultCurrencySymbol, DefaultCurrencyCode);
+                _cachedSettings = new AppSettingsResponse(DefaultCurrencySymbol, DefaultCurrencyCode, DefaultCafeName, DefaultReceiptFooter);
                 _isInitialized = true;
             }
         }

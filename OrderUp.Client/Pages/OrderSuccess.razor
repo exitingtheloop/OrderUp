@@ -10,6 +10,8 @@
 @inject PendingOrderService PendingOrderService
 @inject RecentOrdersService RecentOrdersService
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
+@inject IJSRuntime JS
 
 <PageTitle>Order #@OrderId - OrderUp</PageTitle>
 
@@ -30,53 +32,64 @@
     }
     else
     {
-        @* Status Banners - Using Callout component *@
-        @if (_resultParam == "cancel")
-        {
-            <div class="status-callout">
-                <Callout Variant="Callout.CalloutVariant.Warning" Title="Payment cancelled">
-                    Your order is saved. Pay whenever you're ready.
-                </Callout>
-            </div>
-        }
-        else if (_resultParam == "success" && _isPolling)
-        {
-            <div class="status-banner status-banner-processing">
-                <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
-                <div class="status-banner-content">
-                    <span class="status-banner-title">Confirming payment</span>
-                    <span class="status-banner-text">Please wait while we verify your payment.</span>
+        @* Status Banners - Using Callout component (hidden on print) *@
+        <div class="no-print">
+            @if (_resultParam == "cancel")
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Warning" Title="Payment cancelled">
+                        Your order is saved. Pay whenever you're ready.
+                    </Callout>
                 </div>
-            </div>
-        }
-        else if (_order.PaymentStatus == PaymentStatus.Paid)
-        {
-            <div class="status-callout">
-                <Callout Variant="Callout.CalloutVariant.Success" Title="Payment successful">
-                    Thank you! We're preparing your order now.
-                </Callout>
-            </div>
-        }
-        else if (_resultParam == "success" && !_isPolling && _order.PaymentStatus == PaymentStatus.Pending)
-        {
-            <div class="status-callout">
-                <Callout Variant="Callout.CalloutVariant.Info" Title="Payment processing">
-                    Your payment is still being processed. Try refreshing.
-                </Callout>
-            </div>
-        }
+            }
+            else if (_resultParam == "success" && _isPolling)
+            {
+                <div class="status-banner status-banner-processing">
+                    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
+                    <div class="status-banner-content">
+                        <span class="status-banner-title">Confirming payment</span>
+                        <span class="status-banner-text">Please wait while we verify your payment.</span>
+                    </div>
+                </div>
+            }
+            else if (_order.PaymentStatus == PaymentStatus.Paid)
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Success" Title="Payment successful">
+                        Thank you! We're preparing your order now.
+                    </Callout>
+                </div>
+            }
+            else if (_resultParam == "success" && !_isPolling && _order.PaymentStatus == PaymentStatus.Pending)
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Info" Title="Payment processing">
+                        Your payment is still being processed. Try refreshing.
+                    </Callout>
+                </div>
+            }
+        </div>
 
-        @* Order Card *@
-        <div class="order-card">
+        @* Order Card / Receipt *@
+        <div class="order-card receipt-container">
+            @* Print Header - Only visible on print *@
+            <div class="print-header print-only">
+                <h2 class="print-cafe-name">@AppSettings.CafeName</h2>
+            </div>
+
             <div class="order-card-header">
                 <h1 class="order-number">Order #@_order.Id</h1>
-                <div class="order-badges">
+                <div class="order-badges no-print">
                     <Badge Variant="@GetOrderBadgeVariant(_order.Status)">@GetStatusText(_order.Status)</Badge>
                     <Badge Variant="@GetPaymentBadgeVariant(_order.PaymentStatus)">@GetPaymentStatusText(_order.PaymentStatus)</Badge>
                     @if (_isPolling)
                     {
                         <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
                     }
+                </div>
+                @* Print-only status text *@
+                <div class="print-only print-status">
+                    <span>@GetStatusText(_order.Status) | @GetPaymentStatusText(_order.PaymentStatus)</span>
                 </div>
             </div>
 
@@ -151,10 +164,15 @@
                     <PriceDisplay Amount="@_order.Total" Size="PriceDisplay.PriceSize.ExtraLarge" />
                 </div>
 
-                @* Payment CTA *@
+                @* Print Footer - Only visible on print *@
+                <div class="print-footer print-only">
+                    <p>@AppSettings.ReceiptFooter</p>
+                </div>
+
+                @* Payment CTA - Hidden on print *@
                 @if (_order.PaymentStatus == PaymentStatus.Pending && !_isPolling)
                 {
-                    <div class="payment-action">
+                    <div class="payment-action no-print">
                         <button class="btn btn-primary btn-lg w-full" @onclick="PayNow" disabled="@_isProcessingPayment">
                             @if (_isProcessingPayment)
                             {
@@ -170,8 +188,16 @@
                 }
             </div>
 
-            <div class="order-card-footer">
+            <div class="order-card-footer no-print">
                 <a href="/orders" class="btn btn-secondary btn-md">All orders</a>
+                <button type="button" class="btn btn-secondary btn-md" @onclick="PrintReceipt">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <polyline points="6,9 6,2 18,2 18,9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    Print
+                </button>
                 <a href="/" class="btn btn-secondary btn-md">Back to menu</a>
             </div>
         </div>
@@ -302,6 +328,11 @@
         {
             _isProcessingPayment = false;
         }
+    }
+
+    private async Task PrintReceipt()
+    {
+        await JS.InvokeVoidAsync("print");
     }
 
     private static decimal CalculateItemSubtotal(OrderItemDto item)

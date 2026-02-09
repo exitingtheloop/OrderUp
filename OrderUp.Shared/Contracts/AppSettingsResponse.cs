@@ -5,5 +5,7 @@ namespace OrderUp.Shared.Contracts;
 /// </summary>
 public record AppSettingsResponse(
     string CurrencySymbol,
-    string CurrencyCode
+    string CurrencyCode,
+    string CafeName,
+    string ReceiptFooter
 );

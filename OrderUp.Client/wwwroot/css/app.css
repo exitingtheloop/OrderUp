@@ -52,19 +52,19 @@ a, .btn-link {
     color: var(--text);
 }
 
-#blazor-error-ui .dismiss {
-    cursor: pointer;
-    position: absolute;
-    right: var(--space-3);
-    top: var(--space-2);
-    color: var(--muted);
-    font-size: var(--text-lg);
-}
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: var(--space-3);
+        top: var(--space-2);
+        color: var(--muted);
+        font-size: var(--text-lg);
+    }
 
-#blazor-error-ui .reload {
-    color: var(--primary);
-    text-decoration: underline;
-}
+    #blazor-error-ui .reload {
+        color: var(--primary);
+        text-decoration: underline;
+    }
 
 .blazor-error-boundary {
     background: var(--danger-bg);
@@ -74,9 +74,9 @@ a, .btn-link {
     border-radius: var(--radius-md);
 }
 
-.blazor-error-boundary::after {
-    content: "An error has occurred.";
-}
+    .blazor-error-boundary::after {
+        content: "An error has occurred.";
+    }
 
 /* Loading progress - use design system colors */
 .loading-progress {
@@ -87,19 +87,19 @@ a, .btn-link {
     margin: 25vh auto 1rem auto;
 }
 
-.loading-progress circle {
-    fill: none;
-    stroke: var(--border);
-    stroke-width: 0.4rem;
-    transform-origin: 50% 50%;
-    transform: rotate(-90deg);
-}
+    .loading-progress circle {
+        fill: none;
+        stroke: var(--border);
+        stroke-width: 0.4rem;
+        transform-origin: 50% 50%;
+        transform: rotate(-90deg);
+    }
 
-.loading-progress circle:last-child {
-    stroke: var(--primary);
-    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
-    transition: stroke-dasharray 0.05s ease-in-out;
-}
+        .loading-progress circle:last-child {
+            stroke: var(--primary);
+            stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+            transition: stroke-dasharray 0.05s ease-in-out;
+        }
 
 .loading-progress-text {
     position: absolute;
@@ -111,9 +111,9 @@ a, .btn-link {
     inset: calc(25vh + 3rem) 0 auto 0;
 }
 
-.loading-progress-text::after {
-    content: var(--blazor-load-percentage-text, "Loading");
-}
+    .loading-progress-text::after {
+        content: var(--blazor-load-percentage-text, "Loading");
+    }
 
 /* Code styling */
 code {
@@ -123,4 +123,37 @@ code {
     background: var(--surface-active);
     padding: 0.125em 0.375em;
     border-radius: var(--radius-sm);
+}
+
+/* ========================================
+   Global Print Styles
+   ======================================== */
+@media print {
+    /* Hide app shell elements */
+    .app-sidebar,
+    .app-shell > aside {
+        display: none !important;
+    }
+
+    /* Make main content full width */
+    .app-shell {
+        display: block !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    .app-main {
+        width: 100% !important;
+    }
+
+    .app-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+        background: #fff !important;
+    }
+
+    /* General print resets */
+    body {
+        background: #fff !important;
+    }
 }

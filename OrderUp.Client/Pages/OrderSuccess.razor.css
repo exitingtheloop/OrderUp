@@ -149,10 +149,10 @@
     border-bottom: 1px solid var(--divider);
 }
 
-.order-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
+    .order-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
 
 .order-item-qty {
     font-size: var(--text-sm);
@@ -233,24 +233,111 @@
 }
 
 /* ----------------------------------------
+   Print Styles
+   ---------------------------------------- */
+.print-only {
+    display: none;
+}
+
+.print-header {
+    text-align: center;
+    padding-bottom: var(--space-4);
+    border-bottom: 2px solid #000;
+    margin-bottom: var(--space-4);
+}
+
+.print-cafe-name {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.print-status {
+    font-size: 14px;
+    color: #666;
+}
+
+.print-footer {
+    text-align: center;
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+    border-top: 1px dashed #ccc;
+}
+
+    .print-footer p {
+        margin: 0;
+        font-size: 14px;
+        color: #666;
+    }
+
+/* Print Media Query */
+@media print {
+    /* Hide non-print elements */
+    .no-print {
+        display: none !important;
+    }
+
+    /* Show print-only elements */
+    .print-only {
+        display: block !important;
+    }
+
+    /* Reset page styles */
+    .order-page {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .order-card {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .order-card-header {
+        border-bottom: 1px solid #000;
+    }
+
+    .order-card-body {
+        padding: 16px 0;
+    }
+
+    /* Make sure text is black for printing */
+    * {
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    .addon-tag {
+        border: 1px solid #ccc;
+    }
+
+    /* Page break handling */
+    .receipt-container {
+        page-break-inside: avoid;
+    }
+}
+
+/* ----------------------------------------
    Responsive
    ---------------------------------------- */
 @media (max-width: 480px) {
     .info-grid {
         gap: var(--space-3);
     }
-    
+
     .order-card-header {
         flex-direction: column;
         align-items: flex-start;
     }
-    
+
     .order-card-footer {
         flex-direction: column;
     }
 
-    .order-card-footer .btn {
-        width: 100%;
-        justify-content: center;
-    }
+        .order-card-footer .btn {
+            width: 100%;
+            justify-content: center;
+        }
 }
