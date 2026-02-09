@@ -33,10 +33,11 @@
    Responsive
    ======================================== */
 
-/* Mobile */
+/* Mobile - use white background, let card shadows create hierarchy */
 @media (max-width: 768px) {
     .app-shell {
         flex-direction: column;
+        background: var(--surface); /* White background on mobile */
     }
 
     .app-sidebar {
