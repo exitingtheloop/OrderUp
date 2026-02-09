@@ -6,6 +6,7 @@
 @inject AdminApi AdminApi
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
 
 <PageTitle>Admin - Products</PageTitle>
 
@@ -66,7 +67,6 @@ else
                                 @if (!string.IsNullOrEmpty(product.Description))
                                 {
                                     <br />
-                    
                                     <small class="text-muted">@product.Description</small>
                                 }
                             </td>
@@ -75,8 +75,11 @@ else
                                 @foreach (var variant in product.Variants)
                                 {
                                     <span class="badge @(variant.IsAvailable ? "bg-secondary" : "bg-light text-dark") me-1">
-                                        @variant.Name - ?@variant.Price.ToString("N2")
-                                        @(variant.IsDefault ? " ?" : "")
+                                        @variant.Name - @(AppSettings.CurrencySymbol)@variant.Price.ToString("N2")
+                                        @if (variant.IsDefault)
+                                        {
+                                            <span class="ms-1">(Default)</span>
+                                        }
                                     </span>
                                 }
                             </td>
@@ -186,8 +189,8 @@ else
                                 {
                                     <tr>
                                         <td>@variant.Name</td>
-                                        <td>?@variant.Price.ToString("N2")</td>
-                                        <td>@(variant.IsDefault ? "?" : "")</td>
+                                        <td>@(AppSettings.CurrencySymbol)@variant.Price.ToString("N2")</td>
+                                        <td>@(variant.IsDefault ? "Yes" : "")</td>
                                         <td>@(variant.IsAvailable ? "Yes" : "No")</td>
                                         <td>
                                             <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditVariantForm(variant)">Edit</button>
@@ -267,7 +270,7 @@ else
                                                    checked="@selectedAddonIds.Contains(addon.Id)"
                                                    @onchange="e => ToggleAddon(addon.Id, (bool)e.Value!)" />
                                             <label class="form-check-label" for="addon-@addon.Id">
-                                                @addon.Name (?@addon.Price.ToString("N2"))
+                                                @addon.Name (@(AppSettings.CurrencySymbol)@addon.Price.ToString("N2"))
                                                 @if (!addon.IsAvailable)
                                                 {
                                                     <span class="badge bg-warning text-dark ms-1">Unavailable</span>

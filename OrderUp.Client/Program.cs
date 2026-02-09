@@ -18,8 +18,15 @@ builder.Services.AddScoped<AuthApi>();
 builder.Services.AddScoped<PaymentsApi>();
 builder.Services.AddScoped<PendingOrderService>();
 builder.Services.AddScoped<RecentOrdersService>();
+builder.Services.AddScoped<AppSettingsService>();
 builder.Services.AddBlazoredToast();
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<CartState>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Initialize app settings before running
+var appSettings = host.Services.GetRequiredService<AppSettingsService>();
+await appSettings.InitializeAsync();
+
+await host.RunAsync();

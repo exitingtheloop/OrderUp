@@ -7,6 +7,7 @@
 @inject AdminApi AdminApi
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
 
 <PageTitle>Admin - Orders</PageTitle>
 
@@ -60,7 +61,7 @@ else
                             {
                                 <p class="mb-1"><strong>Pickup:</strong> @order.PickupTimeUtc.Value.ToLocalTime().ToString("h:mm tt")</p>
                             }
-                            <p class="mb-2"><strong>Total:</strong> ?@order.Total.ToString("N2")</p>
+                            <p class="mb-2"><strong>Total:</strong> @AppSettings.CurrencySymbol@order.Total.ToString("N2")</p>
 
                             <hr />
 
@@ -73,7 +74,7 @@ else
                                         @if (!string.IsNullOrEmpty(item.Notes))
                                         {
                                             <br />
-                        
+
                                             <small class="text-muted">Note: @item.Notes</small>
                                         }
                                         @if (item.Addons.Any())
@@ -109,7 +110,7 @@ else
                             }
                             else
                             {
-                                <span class="text-muted">@(order.Status == OrderStatus.Completed ? "? Completed" : "? Cancelled")</span>
+                                <span class="text-muted">@(order.Status == OrderStatus.Completed ? "Completed" : "Cancelled")</span>
                             }
                         </div>
                     </div>
