@@ -4,6 +4,7 @@
 @using OrderUp.Shared.Contracts.Orders.Responses
 @using OrderUp.Shared.Contracts.Orders.Requests
 @using OrderUp.Shared.Enums
+@implements IDisposable
 @inject AdminApi AdminApi
 @inject AuthState AuthState
 @inject NavigationManager Navigation
@@ -27,7 +28,7 @@ else
         </div>
     }
 
-    @if (isLoading)
+    @if (isLoading && orders.Count == 0)
     {
         <p><em>Loading orders...</em></p>
     }
@@ -37,11 +38,47 @@ else
     }
     else
     {
-        <div class="mb-3">
-            <strong>Total Orders:</strong> @orders.Count |
-            <strong>Pending:</strong> @orders.Count(o => o.Status == OrderStatus.Pending) |
-            <strong>In Progress:</strong> @orders.Count(o => o.Status == OrderStatus.Confirmed || o.Status == OrderStatus.Preparing) |
-            <strong>Ready:</strong> @orders.Count(o => o.Status == OrderStatus.Ready)
+        @* Stats Row with Refresh Button *@
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div class="order-stats">
+                <strong>Total:</strong> @orders.Count |
+                <strong>Pending:</strong> @orders.Count(o => o.Status == OrderStatus.Pending) |
+                <strong>In Progress:</strong> @orders.Count(o => o.Status == OrderStatus.Confirmed || o.Status == OrderStatus.Preparing) |
+                <strong>Ready:</strong> @orders.Count(o => o.Status == OrderStatus.Ready)
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                @if (_autoRefreshEnabled)
+                {
+                    <span class="badge bg-success d-flex align-items-center gap-1">
+                        <span class="live-dot"></span> Live
+                    </span>
+                }
+                <button class="btn btn-sm @(_autoRefreshEnabled ? "btn-outline-secondary" : "btn-outline-primary")"
+                        @onclick="ToggleAutoRefresh"
+                        title="@(_autoRefreshEnabled ? "Disable auto-refresh" : "Enable auto-refresh")">
+                    @if (_autoRefreshEnabled)
+                    {
+                        <span>Pause</span>
+                    }
+                    else
+                    {
+                        <span>Auto</span>
+                    }
+                </button>
+                <button class="btn btn-sm btn-outline-primary" @onclick="LoadOrders" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                    }
+                    else
+                    {
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                            <path d="M21 3v5h-5" />
+                        </svg>
+                    }
+                </button>
+            </div>
         </div>
 
         <div class="row">
@@ -51,7 +88,16 @@ else
                     <div class="card @GetOrderCardClass(order.Status)">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <strong>Order #@order.Id</strong>
-                            <span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span>
+                            <div class="d-flex gap-2 align-items-center">
+                                <a href="/admin/orders/@order.Id/ticket" class="btn btn-sm btn-outline-secondary" title="Print Kitchen Ticket">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6,9 6,2 18,2 18,9"></polyline>
+                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                </a>
+                                <span class="badge @GetStatusBadgeClass(order.Status)">@order.Status</span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <p class="mb-1"><strong>Customer:</strong> @order.CustomerName</p>
@@ -74,7 +120,6 @@ else
                                         @if (!string.IsNullOrEmpty(item.Notes))
                                         {
                                             <br />
-
                                             <small class="text-muted">Note: @item.Notes</small>
                                         }
                                         @if (item.Addons.Any())
@@ -118,17 +163,31 @@ else
             }
         </div>
     }
-
-    <div class="mt-3">
-        <button class="btn btn-outline-primary" @onclick="LoadOrders" disabled="@isLoading">
-            @if (isLoading)
-            {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-            }
-            Refresh
-        </button>
-    </div>
 }
+
+<style>
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #fff;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    .order-stats {
+        font-size: 0.9rem;
+    }
+</style>
 
 @code {
     private List<OrderDto> orders = [];
@@ -136,6 +195,11 @@ else
     private bool isAuthorized = false;
     private string? errorMessage;
     private int? updatingOrderId;
+
+    // Auto-refresh
+    private bool _autoRefreshEnabled = true;
+    private Timer? _refreshTimer;
+    private const int RefreshIntervalMs = 10000; // 10 seconds
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,6 +213,27 @@ else
 
         isAuthorized = true;
         await LoadOrders();
+        StartAutoRefresh();
+    }
+
+    private void StartAutoRefresh()
+    {
+        _refreshTimer = new Timer(async _ =>
+            {
+                if (_autoRefreshEnabled && !isLoading)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        await LoadOrdersSilent();
+                        StateHasChanged();
+                    });
+                }
+            }, null, RefreshIntervalMs, RefreshIntervalMs);
+    }
+
+    private void ToggleAutoRefresh()
+    {
+        _autoRefreshEnabled = !_autoRefreshEnabled;
     }
 
     private async Task LoadOrders()
@@ -171,6 +256,18 @@ else
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadOrdersSilent()
+    {
+        try
+        {
+            orders = await AdminApi.GetTodaysOrdersAsync();
+        }
+        catch
+        {
+            // Silent fail on auto-refresh
         }
     }
 
@@ -241,4 +338,9 @@ else
         OrderStatus.Cancelled => "btn-outline-danger",
         _ => "btn-secondary"
     };
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
 }

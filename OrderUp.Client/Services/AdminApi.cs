@@ -30,6 +30,14 @@ public class AdminApi
     }
 
     /// <summary>
+    /// Gets a single order by ID.
+    /// </summary>
+    public async Task<OrderDto?> GetOrderAsync(int orderId)
+    {
+        return await _httpClient.GetFromJsonAsync<OrderDto>($"api/orders/{orderId}");
+    }
+
+    /// <summary>
     /// Updates the status of an order.
     /// </summary>
     public async Task<OrderDto?> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusRequest request)

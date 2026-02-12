@@ -1,0 +1,122 @@
+@page "/admin/orders/{OrderId:int}/ticket"
+@using OrderUp.Client.Services
+@using OrderUp.Client.Shared.Ui
+@using OrderUp.Shared.Contracts.Orders.Responses
+@using OrderUp.Shared.Enums
+@inject AdminApi AdminApi
+@inject AppSettingsService AppSettings
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<PageTitle>Kitchen Ticket - Order #@OrderId</PageTitle>
+
+<div class="ticket-page">
+    @if (_isLoading)
+    {
+        <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading..." Centered="true" />
+    }
+    else if (_order is null)
+    {
+        <div class="ticket-error">
+            <p>Order not found</p>
+            <a href="/admin/orders" class="btn btn-secondary">Back to Orders</a>
+        </div>
+    }
+    else
+    {
+        <div class="ticket-container">
+            @* Ticket Header *@
+            <div class="ticket-header">
+                <h1 class="ticket-order-number">ORDER #@_order.Id</h1>
+                <div class="ticket-meta">
+                    <span class="ticket-time">@_order.CreatedAtUtc.ToLocalTime().ToString("h:mm tt")</span>
+                    @if (_order.PickupTimeUtc.HasValue)
+                    {
+                        <span class="ticket-pickup">Pickup: @_order.PickupTimeUtc.Value.ToLocalTime().ToString("h:mm tt")</span>
+                    }
+                    else
+                    {
+                        <span class="ticket-pickup ticket-asap">ASAP</span>
+                    }
+                </div>
+                <div class="ticket-customer">@_order.CustomerName</div>
+            </div>
+
+            <div class="ticket-divider"></div>
+
+            @* Items *@
+            <div class="ticket-items">
+                @foreach (var item in _order.Items)
+                {
+                    <div class="ticket-item">
+                        <div class="ticket-item-header">
+                            <span class="ticket-item-qty">@item.Quantity×</span>
+                            <span class="ticket-item-name">@item.ProductName</span>
+                        </div>
+                        <div class="ticket-item-variant">@item.VariantName</div>
+
+                        @if (item.Addons.Any())
+                        {
+                            <div class="ticket-item-addons">
+                                @foreach (var addon in item.Addons)
+                                {
+                                    <div class="ticket-addon">+ @(addon.Quantity > 1 ? $"{addon.Quantity}× " : "")@addon.Name</div>
+                                }
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(item.Notes))
+                        {
+                            <div class="ticket-item-notes">NOTE: @item.Notes</div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="ticket-divider"></div>
+
+            @* Footer *@
+            <div class="ticket-footer">
+                <span>@_order.Items.Sum(i => i.Quantity) item(s)</span>
+            </div>
+        </div>
+
+        @* Action Buttons - Hidden on Print *@
+        <div class="ticket-actions no-print">
+            <button class="btn btn-primary btn-lg" @onclick="PrintTicket">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6,9 6,2 18,2 18,9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Print Ticket
+            </button>
+            <a href="/admin/orders" class="btn btn-secondary btn-lg">Back to Orders</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private OrderDto? _order;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _order = await AdminApi.GetOrderAsync(OrderId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PrintTicket()
+    {
+        await JS.InvokeVoidAsync("print");
+    }
+}
