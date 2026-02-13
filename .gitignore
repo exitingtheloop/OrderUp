@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Production settings with secrets - use Azure App Settings instead
+appsettings.Production.json

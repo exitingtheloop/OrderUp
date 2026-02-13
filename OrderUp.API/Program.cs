@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<DataContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -73,34 +73,60 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Seed database in Development
-if (app.Environment.IsDevelopment())
+// Apply migrations and seed database on startup
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-    await context.Database.MigrateAsync();
-    await MenuSeeder.SeedAsync(context);
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var configuration = services.GetRequiredService<IConfiguration>();
 
-    // Seed Identity (roles and admin user)
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    await IdentitySeeder.SeedAsync(userManager, roleManager, configuration);
+    try
+    {
+        // Apply pending migrations
+        var context = services.GetRequiredService<DataContext>();
+        logger.LogInformation("Applying database migrations...");
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+
+        // Seed Identity (roles and admin user) - always run
+        var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        await IdentitySeeder.SeedAsync(userManager, roleManager, configuration);
+        logger.LogInformation("Identity seeding completed.");
+
+        // Seed demo menu data only in Development or if explicitly enabled via config
+        var seedDemoData = configuration.GetValue<bool>("SeedDemoData");
+        if (app.Environment.IsDevelopment() || seedDemoData)
+        {
+            logger.LogInformation("Seeding demo menu data...");
+            await MenuSeeder.SeedAsync(context);
+            logger.LogInformation("Demo menu data seeded.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        throw;
+    }
 }
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger(options =>
-    {
-        options.OpenApiVersion = OpenApiSpecVersion.OpenApi2_0;
-    });
+       {
+           options.OpenApiVersion = OpenApiSpecVersion.OpenApi2_0;
+       });
     app.UseSwaggerUI();
+}
+
+// Enable WebAssembly debugging only in Development
+if (app.Environment.IsDevelopment())
+{
     app.UseWebAssemblyDebugging();
 }
 
 // Only use HTTPS redirection in production
-// In development, we need HTTP for Stripe CLI webhook forwarding
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
