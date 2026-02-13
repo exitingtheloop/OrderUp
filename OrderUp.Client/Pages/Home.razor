@@ -90,10 +90,6 @@
                                         <div class="card-image-placeholder">
                                             <img src="@product.ImageUrl" />
                                         </div>
-                                        @* Rotated "drink" element for future image *@
-                                        <div class="card-drink-cutout">
-                                            <img src="@product.ImageUrl" />
-                                        </div>
                                     </div>
                                     @* Add Button Overlay *@
                                     <button type="button"
@@ -156,16 +152,9 @@
             <div class="modal-hero">
                 <div class="modal-image-area">
                     <div class="modal-image-placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                            <rect x="2" y="2" width="20" height="20" rx="2" />
-                            <path d="M2 2l20 20M22 2L2 22" />
-                        </svg>
+                        <img src="@_selectedProduct.ImageUrl" />
                     </div>
-                    <div class="modal-drink-cutout">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
-                        </svg>
-                    </div>
+                    
                 </div>
                 <div class="modal-product-info">
                     <h2 class="modal-product-name">@_selectedProduct.Name</h2>
@@ -419,6 +408,7 @@
         {
             ProductId = _selectedProduct.Id,
             ProductName = _selectedProduct.Name,
+            ImageUrl = _selectedProduct.ImageUrl,
             VariantId = variant.Id,
             VariantName = variant.Name,
             BaseUnitPrice = variant.Price,

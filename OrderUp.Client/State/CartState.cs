@@ -60,6 +60,7 @@ public class CartItem
 {
     public required int ProductId { get; init; }
     public required string ProductName { get; init; }
+    public string? ImageUrl { get; init; }
     public required int VariantId { get; init; }
     public required string VariantName { get; init; }
     public required decimal BaseUnitPrice { get; init; }
