@@ -44,6 +44,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
+          path: app
+
+      - name: Show downloaded files
+        run: |
+          ls -la
+          ls -la app
+          find app -maxdepth 2 -type f | head -n 50
       
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -51,6 +58,7 @@ jobs:
         with:
           app-name: 'OrderUp-taskmaxi'
           slot-name: 'Production'
-          package: .
-
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BA9BD5C5B97B470CA560D582B18D73A1 }}
+          package: app
+          
+
