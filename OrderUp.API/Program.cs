@@ -7,6 +7,7 @@ using OrderUp.API.Payments;
 using OrderUp.API.Services.Admin;
 using OrderUp.API.Services.Menu;
 using OrderUp.API.Services.Orders;
+using OrderUp.API.Services.Reports;
 using Swashbuckle.AspNetCore.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,6 +60,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IAdminMenuService, AdminMenuService>();
+builder.Services.AddScoped<IReportsService, ReportsService>();
 
 // Add payment services
 builder.Services.AddPaymentServices(builder.Configuration);

@@ -3,6 +3,7 @@ using OrderUp.Shared.Contracts.Menu.Requests;
 using OrderUp.Shared.Contracts.Menu.Responses;
 using OrderUp.Shared.Contracts.Orders.Requests;
 using OrderUp.Shared.Contracts.Orders.Responses;
+using OrderUp.Shared.Contracts.Reports;
 
 namespace OrderUp.Client.Services;
 
@@ -201,6 +202,19 @@ public class AdminApi
     {
         var menu = await _httpClient.GetFromJsonAsync<MenuDto>("api/menu");
         return menu?.Categories ?? [];
+    }
+
+    #endregion
+
+    #region Reports
+
+    /// <summary>
+    /// Gets sales report for the specified date range.
+    /// </summary>
+    public async Task<SalesReportResponse?> GetSalesReportAsync(DateOnly startDate, DateOnly endDate)
+    {
+        var url = $"api/admin/reports/sales?startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}";
+        return await _httpClient.GetFromJsonAsync<SalesReportResponse>(url);
     }
 
     #endregion
