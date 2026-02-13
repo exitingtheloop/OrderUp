@@ -47,6 +47,7 @@ public static class MenuSeeder
                 Name = "Americano",
                 Description = "Espresso with hot water",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/americano.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 95.00m, IsDefault = true, IsAvailable = true },
@@ -60,6 +61,7 @@ public static class MenuSeeder
                 Name = "Cafe Latte",
                 Description = "Espresso with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/latte.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 110.00m, IsDefault = true, IsAvailable = true },
@@ -73,6 +75,7 @@ public static class MenuSeeder
                 Name = "Cappuccino",
                 Description = "Espresso with steamed milk foam",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/cappuccino.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 110.00m, IsDefault = true, IsAvailable = true },
@@ -88,6 +91,7 @@ public static class MenuSeeder
                 Name = "Matcha Latte",
                 Description = "Japanese green tea with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/matcha.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 120.00m, IsDefault = true, IsAvailable = true },
@@ -101,6 +105,7 @@ public static class MenuSeeder
                 Name = "Hot Chocolate",
                 Description = "Rich chocolate with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/hotchocolate.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 100.00m, IsDefault = true, IsAvailable = true },
@@ -116,6 +121,7 @@ public static class MenuSeeder
                 Name = "Croissant",
                 Description = "Buttery French pastry",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/croissant.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Regular", Price = 85.00m, IsDefault = true, IsAvailable = true }
@@ -127,6 +133,7 @@ public static class MenuSeeder
                 Name = "Chocolate Muffin",
                 Description = "Rich chocolate muffin",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/muffin.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Regular", Price = 75.00m, IsDefault = true, IsAvailable = true }
