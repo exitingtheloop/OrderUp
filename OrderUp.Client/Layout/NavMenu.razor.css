@@ -53,21 +53,21 @@
     color: white;
 }
 
-.brand-icon svg {
-    width: 20px;
-    height: 20px;
-}
+    .brand-icon svg {
+        width: 20px;
+        height: 20px;
+    }
 
 .brand-name {
     font-size: var(--text-lg);
-    font-weight: var(--font-bold);
+    font-weight: var(--font-light);
     color: white !important;
     letter-spacing: -0.01em;
 }
 
 /* Toggle Button - Mobile only */
 .sidebar-toggle {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 32px;
@@ -91,9 +91,9 @@
 }
 
 /* ----------------------------------------
-   Navigation
+   Desktop Sidebar Navigation
    ---------------------------------------- */
-.sidebar-nav {
+.desktop-nav {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -101,11 +101,44 @@
     gap: var(--space-1);
 }
 
-.sidebar-nav.collapsed {
+/* ----------------------------------------
+   Mobile Nav Panel (separate from sidebar)
+   ---------------------------------------- */
+.mobile-nav {
     display: none;
 }
 
-/* Nav Groups */
+/* Mobile Nav Close Button */
+.mobile-nav-close {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-full);
+    color: white;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-default);
+    z-index: 10;
+}
+
+.mobile-nav-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.mobile-nav-close svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ----------------------------------------
+   Nav Groups
+   ---------------------------------------- */
 .nav-group {
     display: flex;
     flex-direction: column;
@@ -148,21 +181,21 @@
     position: relative;
 }
 
-    /* Remove any default link styling */
+/* Remove any default link styling */
 .nav-link:link,
 .nav-link:visited {
     color: rgba(255, 255, 255, 0.7) !important;
     text-decoration: none !important;
 }
 
-/* Hover State - Subtle gray backdrop */
+/* Hover State */
 .nav-link:hover {
     color: rgba(255, 255, 255, 0.9) !important;
     background: rgba(255, 255, 255, 0.05);
     text-decoration: none !important;
 }
 
-/* Active State - White/light backdrop like "Notifications" in reference */
+/* Active State */
 .nav-link.active {
     color: white !important;
     background: rgba(255, 255, 255, 0.12);
@@ -192,9 +225,11 @@
 
 .nav-label {
     flex: 1;
+    font-size: 0.9rem;
+    font-weight: 300;
 }
 
-/* Badge - Like "3" on Tasks in reference */
+/* Badge */
 .nav-badge {
     display: flex;
     align-items: center;
@@ -296,47 +331,100 @@
    Responsive
    ======================================== */
 
+/* Mobile Overlay Backdrop - Hidden by default */
+.sidebar-overlay {
+    display: none;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
+    /* Show hamburger toggle */
+    .sidebar-toggle {
+        display: flex;
+    }
+
+    /* Hide desktop nav on mobile */
+    .desktop-nav {
+        display: none;
+    }
+
+    /* Simplified header bar */
     .sidebar {
-        margin: var(--space-2);
-        border-radius: var(--radius-xl);
-        padding: var(--space-3);
+        margin: 0;
+        border-radius: 0;
+        padding: var(--space-3) var(--space-4);
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        height: auto;
     }
 
     .sidebar-header {
-        padding-bottom: var(--space-3);
-        margin-bottom: var(--space-3);
+        padding: 0;
+        margin: 0;
+        border-bottom: none;
     }
 
-    .sidebar-nav {
-        position: absolute;
-        top: 72px;
-        left: var(--space-2);
-        right: var(--space-2);
+    /* Overlay backdrop when menu is open */
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: var(--z-modal-backdrop);
+        animation: fadeIn var(--duration-fast) var(--ease-out);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Mobile slide-in panel - Full screen height from right */
+    .mobile-nav {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 300px;
+        max-width: 85vw;
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height for mobile browsers */
         background: linear-gradient(180deg, #0f1115 0%, #151921 100%);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: var(--radius-xl);
-        padding: var(--space-3);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-        z-index: var(--z-dropdown);
-        max-height: calc(100vh - 100px);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        padding: var(--space-16) var(--space-5) var(--space-6);
+        box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+        z-index: var(--z-modal);
         overflow-y: auto;
+        transform: translateX(0);
+        transition: transform var(--duration-base) var(--ease-out);
     }
 
-    .sidebar-nav.collapsed {
-        display: none;
+    .mobile-nav.collapsed {
+        transform: translateX(100%);
+        pointer-events: none;
     }
 }
 
 /* Desktop */
 @media (min-width: 769px) {
-    .sidebar-toggle {
-        display: none;
+    /* Hide mobile nav on desktop */
+    .mobile-nav {
+        display: none !important;
     }
 
-    .sidebar-nav,
-    .sidebar-nav.collapsed {
-        display: flex;
+    .sidebar-overlay {
+        display: none !important;
+    }
+
+    .sidebar-toggle {
+        display: none;
     }
 }

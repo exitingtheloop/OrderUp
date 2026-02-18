@@ -4,6 +4,12 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
+@* Mobile Overlay Backdrop *@
+@if (!collapseNavMenu)
+{
+    <div class="sidebar-overlay" @onclick="ToggleNavMenu"></div>
+}
+
 <div class="sidebar">
     @* Brand Header *@
     <div class="sidebar-header">
@@ -17,33 +23,45 @@
         </a>
         <button type="button" class="sidebar-toggle" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                @if (collapseNavMenu)
-                {
-                    <path d="M4 6h16M4 12h16M4 18h16" />
-                }
-                else
-                {
-                    <path d="M6 18L18 6M6 6l12 12" />
-                }
+                <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
         </button>
     </div>
 
-    @* Navigation *@
-    <nav class="@NavBodyClass">
+    @* Desktop Navigation - Hidden on mobile *@
+    <nav class="desktop-nav">
+        @RenderNavContent()
+    </nav>
+</div>
+
+@* Mobile Slide-in Panel - Hidden on desktop *@
+<nav class="@MobileNavClass">
+    @* Close button at top right *@
+    <button type="button" class="mobile-nav-close" @onclick="ToggleNavMenu" aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+
+    @RenderNavContent()
+</nav>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string MobileNavClass => collapseNavMenu ? "mobile-nav collapsed" : "mobile-nav";
+
+    private RenderFragment RenderNavContent() => __builder =>
+    {
         @* Main Navigation *@
         <div class="nav-group">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" @onclick="CloseMenuOnNavigate">
+
                 <span class="nav-label">Menu</span>
             </NavLink>
 
-            <NavLink class="nav-link" href="cart">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
+            <NavLink class="nav-link" href="cart" @onclick="CloseMenuOnNavigate">
+
                 <span class="nav-label">Cart</span>
                 @if (Cart.ItemCount > 0)
                 {
@@ -51,10 +69,8 @@
                 }
             </NavLink>
 
-            <NavLink class="nav-link" href="orders">
-                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
+            <NavLink class="nav-link" href="orders" @onclick="CloseMenuOnNavigate">
+
                 <span class="nav-label">Orders</span>
             </NavLink>
         </div>
@@ -66,28 +82,28 @@
             <div class="nav-group">
                 <div class="nav-group-label">Admin</div>
 
-                <NavLink class="nav-link" href="admin/orders">
+                <NavLink class="nav-link" href="admin/orders" @onclick="CloseMenuOnNavigate">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     <span class="nav-label">Dashboard</span>
                 </NavLink>
 
-                <NavLink class="nav-link" href="admin/products">
+                <NavLink class="nav-link" href="admin/products" @onclick="CloseMenuOnNavigate">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                     <span class="nav-label">Products</span>
                 </NavLink>
 
-                <NavLink class="nav-link" href="admin/addons">
+                <NavLink class="nav-link" href="admin/addons" @onclick="CloseMenuOnNavigate">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     <span class="nav-label">Addons</span>
                 </NavLink>
 
-                <NavLink class="nav-link" href="admin/reports">
+                <NavLink class="nav-link" href="admin/reports" @onclick="CloseMenuOnNavigate">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
@@ -118,7 +134,7 @@
             <div class="nav-divider"></div>
             <div class="nav-group">
                 <div class="nav-group-label">Admin</div>
-                <NavLink class="nav-link" href="admin/login">
+                <NavLink class="nav-link" href="admin/login" @onclick="CloseMenuOnNavigate">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -126,13 +142,7 @@
                 </NavLink>
             </div>
         }
-    </nav>
-</div>
-
-@code {
-    private bool collapseNavMenu = true;
-
-    private string NavBodyClass => collapseNavMenu ? "sidebar-nav collapsed" : "sidebar-nav";
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,9 +156,15 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
+    private void CloseMenuOnNavigate()
+    {
+        collapseNavMenu = true;
+    }
+
     private async Task Logout()
     {
         await AuthState.LogoutAsync();
+        collapseNavMenu = true;
         Navigation.NavigateTo("/");
     }
 
