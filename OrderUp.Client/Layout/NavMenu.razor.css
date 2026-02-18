@@ -404,12 +404,17 @@
         z-index: var(--z-modal);
         overflow-y: auto;
         transform: translateX(0);
-        transition: transform var(--duration-base) var(--ease-out);
+        transition: transform var(--duration-base) var(--ease-out),
+        visibility 0s linear 0s;
+        visibility: visible;
     }
 
     .mobile-nav.collapsed {
         transform: translateX(100%);
         pointer-events: none;
+        visibility: hidden;
+        transition: transform var(--duration-base) var(--ease-out),
+  visibility 0s linear var(--duration-base);
     }
 }
 
