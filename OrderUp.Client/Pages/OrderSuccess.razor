@@ -1,0 +1,389 @@
+﻿@page "/order-success/{OrderId:int}"
+@using OrderUp.Client.Services
+@using OrderUp.Client.Components
+@using OrderUp.Client.Shared.Ui
+@using OrderUp.Shared.Contracts.Orders.Responses
+@using OrderUp.Shared.Enums
+@implements IDisposable
+@inject OrdersApi OrdersApi
+@inject PaymentsApi PaymentsApi
+@inject PendingOrderService PendingOrderService
+@inject RecentOrdersService RecentOrdersService
+@inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
+@inject IJSRuntime JS
+
+<PageTitle>Order #@OrderId - OrderUp</PageTitle>
+
+<div class="order-page">
+    @if (_isLoading)
+    {
+        <div class="loading-state">
+            <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading order..." Centered="true" />
+        </div>
+    }
+    else if (_order is null)
+    {
+        <EmptyState IconType="EmptyState.EmptyIcon.Search"
+                    Title="Order not found"
+                    Description="We couldn't find this order. It may have been removed or the link is incorrect."
+                    ActionText="Back to Menu"
+                    ActionHref="/" />
+    }
+    else
+    {
+        @* Status Banners - Using Callout component (hidden on print) *@
+        <div class="no-print">
+            @if (_resultParam == "cancel")
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Warning" Title="Payment cancelled">
+                        Your order is saved. Pay whenever you're ready.
+                    </Callout>
+                </div>
+            }
+            else if (_resultParam == "success" && _isPolling)
+            {
+                <div class="status-banner status-banner-processing">
+                    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
+                    <div class="status-banner-content">
+                        <span class="status-banner-title">Confirming payment</span>
+                        <span class="status-banner-text">Please wait while we verify your payment.</span>
+                    </div>
+                </div>
+            }
+            else if (_order.PaymentStatus == PaymentStatus.Paid)
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Success" Title="Payment successful">
+                        Thank you! We're preparing your order now.
+                    </Callout>
+                </div>
+            }
+            else if (_resultParam == "success" && !_isPolling && _order.PaymentStatus == PaymentStatus.Pending)
+            {
+                <div class="status-callout">
+                    <Callout Variant="Callout.CalloutVariant.Info" Title="Payment processing">
+                        Your payment is still being processed. Try refreshing.
+                    </Callout>
+                </div>
+            }
+        </div>
+
+        @* Order Card / Receipt *@
+        <div class="order-card receipt-container">
+            @* Print Header - Only visible on print *@
+            <div class="print-header print-only">
+                <h2 class="print-cafe-name">@AppSettings.CafeName</h2>
+            </div>
+
+            <div class="order-card-header">
+                <h1 class="order-number">Order #@_order.Id</h1>
+                <div class="order-badges no-print">
+                    <Badge Variant="@GetOrderBadgeVariant(_order.Status)">@GetStatusText(_order.Status)</Badge>
+                    <Badge Variant="@GetPaymentBadgeVariant(_order.PaymentStatus)">@GetPaymentStatusText(_order.PaymentStatus)</Badge>
+                    @if (_isPolling)
+                    {
+                        <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
+                    }
+                </div>
+                @* Print-only status text *@
+                <div class="print-only print-status">
+                    <span>@GetStatusText(_order.Status) | @GetPaymentStatusText(_order.PaymentStatus)</span>
+                </div>
+            </div>
+
+            <div class="order-card-body">
+                @* Customer Info Grid *@
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Customer</span>
+                        <span class="info-value">@_order.CustomerName</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Phone</span>
+                        <span class="info-value">@_order.CustomerPhone</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Placed</span>
+                        <span class="info-value">@_order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Pickup</span>
+                        <span class="info-value">
+                            @if (_order.PickupTimeUtc.HasValue)
+                            {
+                                @_order.PickupTimeUtc.Value.ToLocalTime().ToString("MMM d, h:mm tt")
+                            }
+                            else
+                            {
+                                @:ASAP
+                            }
+                        </span>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                @* Order Items *@
+                <h3 class="items-heading">Items</h3>
+                <div class="items-list">
+                    @foreach (var item in _order.Items)
+                    {
+                        <div class="order-item">
+                            <span class="order-item-qty">@item.Quantity×</span>
+                            <div class="order-item-details">
+                                <span class="order-item-name">@item.ProductName</span>
+                                <span class="order-item-variant">@item.VariantName</span>
+                                @if (item.Addons.Any())
+                                {
+                                    <div class="order-item-addons">
+                                        @foreach (var addon in item.Addons)
+                                        {
+                                            <span class="addon-tag">+ @(addon.Quantity > 1 ? $"{addon.Quantity}× " : "")@addon.Name</span>
+                                        }
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(item.Notes))
+                                {
+                                    <span class="order-item-notes">"@item.Notes"</span>
+                                }
+                            </div>
+                            <div class="order-item-price">
+                                <PriceDisplay Amount="@CalculateItemSubtotal(item)" Size="PriceDisplay.PriceSize.Small" />
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <hr class="divider">
+
+                @* Total *@
+                <div class="order-total-row">
+                    <span class="order-total-label">Total</span>
+                    <PriceDisplay Amount="@_order.Total" Size="PriceDisplay.PriceSize.ExtraLarge" />
+                </div>
+
+                @* Print Footer - Only visible on print *@
+                <div class="print-footer print-only">
+                    <p>@AppSettings.ReceiptFooter</p>
+                </div>
+
+                @* Payment CTA - Hidden on print *@
+                @if (_order.PaymentStatus == PaymentStatus.Pending && !_isPolling)
+                {
+                    <div class="payment-action no-print">
+                        <button class="btn btn-primary btn-lg w-full" @onclick="PayNow" disabled="@_isProcessingPayment">
+                            @if (_isProcessingPayment)
+                            {
+                                <span class="spinner spinner-sm"></span>
+                                <span>Redirecting...</span>
+                            }
+                            else
+                            {
+                                <span>Complete payment</span>
+                            }
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <div class="order-card-footer no-print">
+                <a href="/orders" class="btn btn-secondary btn-md">All orders</a>
+                <button type="button" class="btn btn-secondary btn-md" @onclick="PrintReceipt">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+                        <polyline points="6,9 6,2 18,2 18,9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    Print
+                </button>
+                <a href="/" class="btn btn-secondary btn-md">Back to menu</a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "result")]
+    public string? ResultParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "paid")]
+    public int? PaidParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "cancelled")]
+    public int? CancelledParam { get; set; }
+
+    private OrderDto? _order;
+    private bool _isLoading = true;
+    private bool _isProcessingPayment = false;
+    private bool _isPolling = false;
+
+    private string? _resultParam =>
+    ResultParam ??
+   (PaidParam == 1 ? "success" : null) ??
+   (CancelledParam == 1 ? "cancel" : null);
+
+    private bool _wasSuccess => _resultParam == "success";
+
+    private CancellationTokenSource? _pollCts;
+    private const int PollIntervalMs = 2500;
+    private const int MaxPollDurationMs = 20000;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrder();
+        if (_wasSuccess && _order?.PaymentStatus == PaymentStatus.Pending)
+        {
+            _ = StartPollingForPaymentConfirmation();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _order is not null)
+        {
+            await RecentOrdersService.AddOrderAsync(_order.Id);
+            if (_order.PaymentStatus == PaymentStatus.Paid)
+            {
+                await PendingOrderService.ClearPendingOrderAsync();
+            }
+        }
+    }
+
+    private async Task LoadOrder()
+    {
+        _isLoading = true;
+        try
+        {
+            _order = await OrdersApi.GetOrderAsync(OrderId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task StartPollingForPaymentConfirmation()
+    {
+        _pollCts = new CancellationTokenSource();
+        _isPolling = true;
+        StateHasChanged();
+
+        var startTime = DateTime.UtcNow;
+
+        try
+        {
+            while (!_pollCts.Token.IsCancellationRequested)
+            {
+                if ((DateTime.UtcNow - startTime).TotalMilliseconds > MaxPollDurationMs)
+                    break;
+
+                await Task.Delay(PollIntervalMs, _pollCts.Token);
+
+                var refreshedOrder = await OrdersApi.GetOrderAsync(OrderId);
+                if (refreshedOrder is not null)
+                {
+                    _order = refreshedOrder;
+                    StateHasChanged();
+
+                    if (_order.PaymentStatus == PaymentStatus.Paid)
+                    {
+                        await PendingOrderService.ClearPendingOrderAsync();
+                        break;
+                    }
+                    else if (_order.PaymentStatus != PaymentStatus.Pending)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        catch (TaskCanceledException) { }
+        finally
+        {
+            _isPolling = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PayNow()
+    {
+        if (_order is null) return;
+
+        _isProcessingPayment = true;
+        try
+        {
+            await PendingOrderService.SetPendingOrderAsync(_order.Id, _order.CustomerPhone);
+            var checkoutUrl = await PaymentsApi.CreateCheckoutSessionAsync(_order.Id);
+            if (!string.IsNullOrEmpty(checkoutUrl))
+            {
+                Navigation.NavigateTo(checkoutUrl, forceLoad: true);
+            }
+        }
+        finally
+        {
+            _isProcessingPayment = false;
+        }
+    }
+
+    private async Task PrintReceipt()
+    {
+        await JS.InvokeVoidAsync("print");
+    }
+
+    private static decimal CalculateItemSubtotal(OrderItemDto item)
+    {
+        var addonTotal = item.Addons.Sum(a => a.UnitPrice * a.Quantity);
+        return (item.BaseUnitPrice + addonTotal) * item.Quantity;
+    }
+
+    private static string GetStatusText(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => "Pending",
+        OrderStatus.Confirmed => "Confirmed",
+        OrderStatus.Preparing => "Preparing",
+        OrderStatus.Ready => "Ready",
+        OrderStatus.Completed => "Completed",
+        OrderStatus.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
+
+    private static Badge.BadgeVariant GetOrderBadgeVariant(OrderStatus status) => status switch
+    {
+        OrderStatus.Pending => Badge.BadgeVariant.Neutral,
+        OrderStatus.Confirmed => Badge.BadgeVariant.Info,
+        OrderStatus.Preparing => Badge.BadgeVariant.Info,
+        OrderStatus.Ready => Badge.BadgeVariant.Success,
+        OrderStatus.Completed => Badge.BadgeVariant.Neutral,
+        OrderStatus.Cancelled => Badge.BadgeVariant.Danger,
+        _ => Badge.BadgeVariant.Neutral
+    };
+
+    private static string GetPaymentStatusText(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "Unpaid",
+        PaymentStatus.Paid => "Paid",
+        PaymentStatus.Failed => "Failed",
+        PaymentStatus.Refunded => "Refunded",
+        _ => status.ToString()
+    };
+
+    private static Badge.BadgeVariant GetPaymentBadgeVariant(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => Badge.BadgeVariant.Warning,
+        PaymentStatus.Paid => Badge.BadgeVariant.Success,
+        PaymentStatus.Failed => Badge.BadgeVariant.Danger,
+        PaymentStatus.Refunded => Badge.BadgeVariant.Neutral,
+        _ => Badge.BadgeVariant.Neutral
+    };
+
+    public void Dispose()
+    {
+        _pollCts?.Cancel();
+        _pollCts?.Dispose();
+    }
+}

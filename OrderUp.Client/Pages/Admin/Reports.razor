@@ -1,0 +1,296 @@
+@page "/admin/reports"
+@using OrderUp.Client.Services
+@using OrderUp.Client.State
+@using OrderUp.Client.Components
+@using OrderUp.Shared.Contracts.Reports
+@inject AdminApi AdminApi
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
+
+<PageTitle>Admin - Sales Reports</PageTitle>
+
+@if (!_isAuthorized)
+{
+    <p><em>Checking authorization...</em></p>
+}
+else
+{
+    <div class="reports-page">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <h1 class="mb-0">Sales Report</h1>
+
+            <div class="btn-group" role="group">
+                <button type="button" class="btn @GetRangeButtonClass("today")"
+                        @onclick="@(() => SelectRange("today"))">
+                    Today
+                </button>
+                <button type="button" class="btn @GetRangeButtonClass("week")"
+                        @onclick="@(() => SelectRange("week"))">
+                    This Week
+                </button>
+                <button type="button" class="btn @GetRangeButtonClass("month")"
+                        @onclick="@(() => SelectRange("month"))">
+                    This Month
+                </button>
+                <button type="button" class="btn @GetRangeButtonClass("custom")"
+                        @onclick="@(() => _showCustomRange = !_showCustomRange)">
+                    Custom
+                </button>
+            </div>
+        </div>
+
+        @if (_showCustomRange)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-auto">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" @bind="_customStartDate" />
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" @bind="_customEndDate" />
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" @onclick="ApplyCustomRange">Apply</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (_errorMessage is not null)
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+
+        @if (_isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border" role="status"></div>
+                <p class="mt-2">Loading report...</p>
+            </div>
+        }
+        else if (_report is not null)
+        {
+            @* Summary Cards *@
+            <div class="row g-4 mb-4">
+                <div class="col-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-value text-success">@AppSettings.CurrencySymbol@_report.TotalRevenue.ToString("N2")</div>
+                            <div class="stat-label">Total Revenue</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-value">@_report.TotalOrders</div>
+                            <div class="stat-label">Total Orders</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-value">@AppSettings.CurrencySymbol@_report.AverageOrderValue.ToString("N2")</div>
+                            <div class="stat-label">Avg per Order</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <div class="stat-value text-danger">@_report.CancelledOrders</div>
+                            <div class="stat-label">Cancelled</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                @* Daily Sales *@
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Daily Sales</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (_report.DailySales.Count == 0)
+                            {
+                                <p class="text-muted">No sales data for this period.</p>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th class="text-end">Orders</th>
+                                                <th class="text-end">Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var day in _report.DailySales.Take(14))
+                                            {
+                                                <tr>
+                                                    <td>@day.Date.ToString("ddd, MMM d")</td>
+                                                    <td class="text-end">@day.OrderCount</td>
+                                                    <td class="text-end">@AppSettings.CurrencySymbol@day.Revenue.ToString("N2")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* Top Products *@
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top Products</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (_report.TopProducts.Count == 0)
+                            {
+                                <p class="text-muted">No product data for this period.</p>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Qty</th>
+                                                <th class="text-end">Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @{
+                                                var rank = 1;
+                                            }
+                                            @foreach (var product in _report.TopProducts)
+                                            {
+                                                <tr>
+                                                    <td>@rank</td>
+                                                    <td>
+                                                        <strong>@product.ProductName</strong>
+                                                        <br /><small class="text-muted">@product.VariantName</small>
+                                                    </td>
+                                                    <td class="text-end">@product.QuantitySold</td>
+                                                    <td class="text-end">@AppSettings.CurrencySymbol@product.Revenue.ToString("N2")</td>
+                                                </tr>
+                                                rank++;
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+
+@code {
+    private bool _isAuthorized;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private SalesReportResponse? _report;
+
+    private string _selectedRange = "today";
+    private bool _showCustomRange;
+    private DateTime _customStartDate = DateTime.Today.AddDays(-7);
+    private DateTime _customEndDate = DateTime.Today;
+
+    private DateOnly _startDate;
+    private DateOnly _endDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthState.InitializeAsync();
+
+        if (!AuthState.IsAdmin)
+        {
+            Navigation.NavigateTo("/admin/login");
+            return;
+        }
+
+        _isAuthorized = true;
+        await SelectRange("today");
+    }
+
+    private string GetRangeButtonClass(string range) =>
+        _selectedRange == range ? "btn-primary" : "btn-outline-primary";
+
+    private async Task SelectRange(string range)
+    {
+        _selectedRange = range;
+        _showCustomRange = false;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        _endDate = today;
+        _startDate = range switch
+        {
+            "today" => today,
+            "week" => today.AddDays(-(int)today.DayOfWeek),
+            "month" => new DateOnly(today.Year, today.Month, 1),
+            _ => today
+        };
+
+        await LoadReport();
+    }
+
+    private async Task ApplyCustomRange()
+    {
+        _selectedRange = "custom";
+        _startDate = DateOnly.FromDateTime(_customStartDate);
+        _endDate = DateOnly.FromDateTime(_customEndDate);
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _report = await AdminApi.GetSalesReportAsync(_startDate, _endDate);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load report: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

@@ -8,4 +8,6 @@ public class Addon
     public string Group { get; set; } = string.Empty;
     public int? MaxPerItem { get; set; }
     public bool IsAvailable { get; set; } = true;
+
+    public ICollection<ProductAddon> ProductAddons { get; set; } = new List<ProductAddon>();
 }

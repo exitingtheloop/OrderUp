@@ -1,7 +1,448 @@
 ﻿@page "/"
+@using OrderUp.Client.Services
+@using OrderUp.Client.State
+@using OrderUp.Client.Components
+@using OrderUp.Client.Shared.Ui
+@using OrderUp.Shared.Contracts.Menu.Responses
+@inject MenuApi MenuApi
+@inject CartState Cart
+@inject IToastService ToastService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>OrderUp - Menu</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="menu-page">
+    @if (_loading)
+    {
+        <div class="loading-state">
+            <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading menu..." Centered="true" />
+        </div>
+    }
+    else if (_menu is null)
+    {
+        <EmptyState IconType="EmptyState.EmptyIcon.Default"
+                    Title="Couldn't load menu"
+                    Description="Something went wrong. Please try refreshing the page." />
+    }
+    else
+    {
+        <header class="menu-header">
+            <div class="menu-header-top">
+                <div>
+                    <h1 class="menu-title">Menu</h1>
+                    <p class="menu-subtitle">Fresh coffee & treats, made to order</p>
+                </div>
+            </div>
 
-Welcome to your new app.
+            @* Search Bar *@
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                    <input type="text"
+                           class="search-input"
+                           placeholder="Search menu..."
+                           @bind="_searchQuery"
+                           @bind:event="oninput" />
+                    @if (!string.IsNullOrEmpty(_searchQuery))
+                    {
+                        <button type="button" class="search-clear" @onclick="ClearSearch">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    }
+                </div>
+            </div>
+        </header>
+
+        @if (!FilteredCategories.Any())
+        {
+            <div class="no-results">
+                <div class="no-results-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                </div>
+                <p class="no-results-text">No items match "<strong>@_searchQuery</strong>"</p>
+                <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearSearch">Clear search</button>
+            </div>
+        }
+        else
+        {
+            @foreach (var (category, products) in FilteredCategories)
+            {
+                <section class="menu-section">
+                    <div class="category-header">
+                        <h2 class="category-title">@category.Name</h2>
+                        <span class="category-count">@products.Count item@(products.Count != 1 ? "s" : "")</span>
+                    </div>
+
+                    <div class="product-grid">
+                        @foreach (var product in products)
+                        {
+                            <article class="product-card" @onclick="() => OpenCustomizer(product)">
+                                @* Image Area with Rotated Placeholder *@
+                                <div class="card-image-area">
+                                    <div class="card-image-wrapper">
+                                        <div class="card-image-placeholder">
+                                            <img src="@product.ImageUrl" />
+                                        </div>
+                                    </div>
+                                    @* Add Button Overlay *@
+                                    <button type="button"
+                                            class="card-add-btn"
+                                            @onclick:stopPropagation
+                                            @onclick="() => OpenCustomizer(product)"
+                                            aria-label="Add @product.Name">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M12 5v14M5 12h14" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                @* Card Content *@
+                                <div class="card-content">
+                                    <h3 class="card-name">@product.Name</h3>
+                                    @if (!string.IsNullOrEmpty(product.Description))
+                                    {
+                                        <p class="card-description">@product.Description</p>
+                                    }
+                                    <div class="card-footer">
+                                        <div class="card-price">
+                                            @if (product.Variants.Count == 1)
+                                            {
+                                                <PriceDisplay Amount="@product.Variants[0].Price" Size="PriceDisplay.PriceSize.Base" />
+                                            }
+                                            else
+                                            {
+                                                <span class="price-from">from </span>
+                                                <PriceDisplay Amount="@product.Variants.Min(v => v.Price)" Size="PriceDisplay.PriceSize.Base" />
+                                            }
+                                        </div>
+                                        @if (product.Variants.Count > 1)
+                                        {
+                                            <span class="card-variants-hint">@product.Variants.Count sizes</span>
+                                        }
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        }
+    }
+</div>
+
+@* Product Customization Modal *@
+@if (_selectedProduct is not null)
+{
+    <div class="modal-overlay" @onclick="CloseCustomizer">
+        <div class="modal-content modal-product" @onclick:stopPropagation>
+            <button type="button" class="modal-close" @onclick="CloseCustomizer" disabled="@_isAdding" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            @* Modal Hero - Product Image + Info *@
+            <div class="modal-hero">
+                <div class="modal-image-area">
+                    <div class="modal-image-placeholder">
+                        <img src="@_selectedProduct.ImageUrl" />
+                    </div>
+                    
+                </div>
+                <div class="modal-product-info">
+                    <h2 class="modal-product-name">@_selectedProduct.Name</h2>
+                    @if (!string.IsNullOrEmpty(_selectedProduct.Description))
+                    {
+                        <p class="modal-product-description">@_selectedProduct.Description</p>
+                    }
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @* Size Selection *@
+                <div class="customizer-section">
+                    <div class="section-header">
+                        <h3 class="section-label">Size</h3>
+                        <span class="section-required">Required</span>
+                    </div>
+                    <div class="variant-grid">
+                        @foreach (var variant in _selectedProduct.Variants)
+                        {
+                            var isSelected = _selectedVariantId == variant.Id;
+                            <label class="variant-option @(isSelected ? "selected" : "")">
+                                <input type="radio"
+                                       name="variant"
+                                       checked="@isSelected"
+                                       @onchange="() => SelectVariant(variant.Id)"
+                                       disabled="@_isAdding">
+                                <div class="variant-content">
+                                    <span class="variant-name">@variant.Name</span>
+                                    @if (variant.IsDefault)
+                                    {
+                                        <span class="variant-default">Popular</span>
+                                    }
+                                </div>
+                                <span class="variant-price">
+                                    <PriceDisplay Amount="@variant.Price" Size="PriceDisplay.PriceSize.Small" />
+                                </span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                @* Addons *@
+                @if (_selectedProduct.AllowedAddons.Count > 0)
+                {
+                    var addonGroups = _selectedProduct.AllowedAddons.GroupBy(a => a.Group);
+                    @foreach (var group in addonGroups)
+                    {
+                        <div class="customizer-section">
+                            <div class="section-header">
+                                <h3 class="section-label">@group.Key</h3>
+                                <span class="section-optional">Optional</span>
+                            </div>
+                            <div class="addon-list">
+                                @foreach (var addon in group)
+                                {
+                                    var currentQty = GetAddonQuantity(addon.Id);
+                                    var maxQty = addon.MaxPerItem ?? 10;
+
+                                    <div class="addon-row @(currentQty > 0 ? "addon-selected" : "")">
+                                        <div class="addon-info">
+                                            <span class="addon-name">@addon.Name</span>
+                                            <span class="addon-price">
+                                                <PriceDisplay Amount="@addon.Price" Size="PriceDisplay.PriceSize.Small" ShowPlus="true" />
+                                            </span>
+                                        </div>
+                                        <QuantityStepper Value="@currentQty"
+                                                         Min="0"
+                                                         Max="@maxQty"
+                                                         Disabled="@_isAdding"
+                                                         OnChange="(qty) => SetAddonQuantity(addon.Id, qty)" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+
+                @* Notes *@
+                <div class="customizer-section">
+                    <div class="section-header">
+                        <h3 class="section-label">Special Instructions</h3>
+                        <span class="section-optional">Optional</span>
+                    </div>
+                    <textarea class="input notes-input"
+                              rows="2"
+                              placeholder="Any allergies or preferences? Let us know..."
+                              @bind="_notes"
+                              disabled="@_isAdding"></textarea>
+                </div>
+            </div>
+
+            @* Sticky Footer *@
+            <div class="modal-footer">
+                <div class="modal-total">
+                    <span class="total-label">Total</span>
+                    <span class="total-amount">
+                        <PriceDisplay Amount="@CalculateItemTotal()" Size="PriceDisplay.PriceSize.Large" />
+                    </span>
+                </div>
+                <button type="button"
+                        class="btn btn-primary btn-lg btn-add-cart"
+                        @onclick="AddToCart"
+                        disabled="@(_selectedVariantId is null || _isAdding)">
+                    @if (_isAdding)
+                    {
+                        <span class="spinner spinner-sm"></span>
+                        <span>Adding...</span>
+                    }
+                    else if (_addedSuccess)
+                    {
+                        <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Added!</span>
+                    }
+                    else
+                    {
+                        <span>Add to cart</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private MenuDto? _menu;
+    private bool _loading = true;
+    private string _searchQuery = "";
+
+    // Customizer state
+    private ProductDto? _selectedProduct;
+    private int? _selectedVariantId;
+    private Dictionary<int, int> _selectedAddons = new();
+    private string? _notes;
+
+    // Add-to-cart feedback state
+    private bool _isAdding = false;
+    private bool _addedSuccess = false;
+
+    // Computed property for filtered categories
+    private IEnumerable<(CategoryDto Category, List<ProductDto> Products)> FilteredCategories
+    {
+        get
+        {
+            if (_menu is null) return Enumerable.Empty<(CategoryDto, List<ProductDto>)>();
+
+            return _menu.Categories
+                .Select(category => (
+                    Category: category,
+                    Products: _menu.Products
+                        .Where(p => p.CategoryId == category.Id)
+                        .Where(p => string.IsNullOrEmpty(_searchQuery) ||
+                            p.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                            (p.Description?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false))
+                        .ToList()
+                ))
+                .Where(x => x.Products.Count > 0);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _menu = await MenuApi.GetMenuAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ClearSearch()
+    {
+        _searchQuery = "";
+    }
+
+    private void OpenCustomizer(ProductDto product)
+    {
+        _selectedProduct = product;
+        _selectedVariantId = product.Variants.FirstOrDefault(v => v.IsDefault)?.Id ?? product.Variants.FirstOrDefault()?.Id;
+        _selectedAddons.Clear();
+        _notes = null;
+        _addedSuccess = false;
+        _isAdding = false;
+    }
+
+    private void CloseCustomizer()
+    {
+        if (_isAdding) return;
+        _selectedProduct = null;
+        _selectedVariantId = null;
+        _selectedAddons.Clear();
+        _notes = null;
+        _addedSuccess = false;
+        _isAdding = false;
+    }
+
+    private void SelectVariant(int variantId)
+    {
+        _selectedVariantId = variantId;
+    }
+
+    private int GetAddonQuantity(int addonId)
+    {
+        return _selectedAddons.TryGetValue(addonId, out var qty) ? qty : 0;
+    }
+
+    private void SetAddonQuantity(int addonId, int quantity)
+    {
+        if (quantity <= 0)
+        {
+            _selectedAddons.Remove(addonId);
+        }
+        else
+        {
+            _selectedAddons[addonId] = quantity;
+        }
+    }
+
+    private decimal CalculateItemTotal()
+    {
+        if (_selectedProduct is null || _selectedVariantId is null)
+            return 0;
+
+        var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
+        var total = variant.Price;
+
+        foreach (var (addonId, qty) in _selectedAddons)
+        {
+            var addon = _selectedProduct.AllowedAddons.First(a => a.Id == addonId);
+            total += addon.Price * qty;
+        }
+
+        return total;
+    }
+
+    private async Task AddToCart()
+    {
+        if (_selectedProduct is null || _selectedVariantId is null || _isAdding)
+            return;
+
+        _isAdding = true;
+        StateHasChanged();
+
+        var variant = _selectedProduct.Variants.First(v => v.Id == _selectedVariantId);
+
+        var cartItem = new CartItem
+        {
+            ProductId = _selectedProduct.Id,
+            ProductName = _selectedProduct.Name,
+            ImageUrl = _selectedProduct.ImageUrl,
+            VariantId = variant.Id,
+            VariantName = variant.Name,
+            BaseUnitPrice = variant.Price,
+            Quantity = 1,
+            Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes,
+            Addons = _selectedAddons
+                .Where(kvp => kvp.Value > 0)
+                .Select(kvp =>
+                {
+                     var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
+                     return new CartItemAddon
+                     {
+                         AddonId = addon.Id,
+                         Name = addon.Name,
+                         Group = addon.Group,
+                         UnitPrice = addon.Price,
+                         Quantity = kvp.Value
+                     };
+                })
+              .ToList()
+        };
+
+        Cart.AddItem(cartItem);
+
+        // Show success state
+        _addedSuccess = true;
+        _isAdding = false;
+        StateHasChanged();
+
+        // Toast notification
+        ToastService.ShowSuccess($"Added {_selectedProduct.Name} to cart");
+
+        // Brief delay then close
+        await Task.Delay(600);
+        CloseCustomizer();
+    }
+}

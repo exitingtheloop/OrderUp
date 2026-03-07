@@ -1,0 +1,184 @@
+/* ========================================
+   Kitchen Ticket Page - Optimized for Thermal Printers
+   ======================================== */
+
+.ticket-page {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: var(--space-4);
+}
+
+.ticket-error {
+    text-align: center;
+    padding: var(--space-8);
+}
+
+/* ----------------------------------------
+   Ticket Container
+   ---------------------------------------- */
+.ticket-container {
+    background: #fff;
+    border: 2px solid #000;
+    padding: var(--space-4);
+    font-family: 'Courier New', monospace;
+}
+
+.ticket-header {
+    text-align: center;
+    margin-bottom: var(--space-3);
+}
+
+.ticket-order-number {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+.ticket-meta {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+ font-size: 14px;
+}
+
+.ticket-pickup {
+    font-weight: bold;
+}
+
+.ticket-asap {
+    background: #000;
+    color: #fff;
+    padding: 2px 8px;
+}
+
+.ticket-customer {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: var(--space-2);
+}
+
+/* ----------------------------------------
+   Divider
+   ---------------------------------------- */
+.ticket-divider {
+    border-top: 2px dashed #000;
+    margin: var(--space-3) 0;
+}
+
+/* ----------------------------------------
+   Items
+   ---------------------------------------- */
+.ticket-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.ticket-item {
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid #ccc;
+}
+
+.ticket-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.ticket-item-header {
+    display: flex;
+    gap: var(--space-2);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.ticket-item-qty {
+    flex-shrink: 0;
+}
+
+.ticket-item-name {
+    text-transform: uppercase;
+}
+
+.ticket-item-variant {
+    font-size: 14px;
+    color: #666;
+    margin-left: 28px;
+}
+
+.ticket-item-addons {
+    margin-top: var(--space-1);
+    margin-left: 28px;
+}
+
+.ticket-addon {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.ticket-item-notes {
+    margin-top: var(--space-2);
+    margin-left: 28px;
+    padding: var(--space-2);
+    background: #f0f0f0;
+    border-left: 4px solid #000;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* ----------------------------------------
+   Footer
+   ---------------------------------------- */
+.ticket-footer {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+}
+
+/* ----------------------------------------
+ Action Buttons
+   ---------------------------------------- */
+.ticket-actions {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+    justify-content: center;
+}
+
+.ticket-actions .btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* ----------------------------------------
+   Print Styles
+   ---------------------------------------- */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .ticket-page {
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .ticket-container {
+        border: none;
+        padding: 8px;
+    }
+
+    .ticket-order-number {
+        font-size: 28px;
+    }
+
+    /* Optimize for 80mm thermal printer width */
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+}

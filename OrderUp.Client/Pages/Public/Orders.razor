@@ -1,0 +1,147 @@
+﻿@page "/orders"
+@using OrderUp.Client.Services
+@using OrderUp.Client.Components
+@using OrderUp.Client.Shared.Ui
+@using OrderUp.Shared.Contracts.Orders.Responses
+@using OrderUp.Shared.Enums
+@inject RecentOrdersService RecentOrdersService
+@inject OrdersApi OrdersApi
+
+<PageTitle>OrderUp - My Orders</PageTitle>
+
+<div class="orders-page">
+    <header class="page-header">
+        <h1 class="page-title">Orders</h1>
+        <p class="page-subtitle">Orders placed from this device</p>
+    </header>
+
+    @if (_loading)
+    {
+        <div class="loading-state">
+            <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading orders..." Centered="true" />
+        </div>
+    }
+    else if (_orders.Count == 0)
+    {
+        <EmptyState IconType="EmptyState.EmptyIcon.Order"
+                    Title="No orders yet"
+                    Description="When you place an order, it will appear here."
+                    ActionText="Browse Menu"
+                    ActionHref="/" />
+    }
+    else
+    {
+        <div class="orders-feed">
+            @foreach (var order in _orders)
+            {
+                <a href="/order-success/@order.Id" class="order-card">
+                    <div class="order-card-main">
+                        <div class="order-card-top">
+                            <span class="order-card-id">Order #@order.Id</span>
+                            <Badge Variant="@GetBadgeVariant(order.PaymentStatus)">@GetPaymentStatusText(order.PaymentStatus)</Badge>
+                        </div>
+                        <div class="order-card-meta">
+                            <span>@order.ItemCount item@(order.ItemCount != 1 ? "s" : "")</span>
+                            <span class="meta-separator">·</span>
+                            <span>@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                        </div>
+                    </div>
+                    <div class="order-card-right">
+                        <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
+                        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </a>
+            }
+        </div>
+
+        <div class="page-footer">
+            <a href="/" class="btn btn-secondary btn-md">Back to Menu</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<OrderSummaryDto> _orders = new();
+    private bool _loading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadOrders();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadOrders()
+    {
+        _loading = true;
+
+        try
+        {
+            var orderIds = await RecentOrdersService.GetOrderIdsAsync();
+            var orders = new List<OrderSummaryDto>();
+            var idsToRemove = new List<int>();
+
+            foreach (var orderId in orderIds)
+            {
+                try
+                {
+                    var order = await OrdersApi.GetOrderAsync(orderId);
+                    if (order is not null)
+                    {
+                        orders.Add(new OrderSummaryDto(
+                           order.Id,
+                      order.CustomerName,
+                             order.CreatedAtUtc,
+                    order.PickupTimeUtc,
+                           order.Status,
+                       order.PaymentStatus,
+                         order.Total,
+                         order.Items.Sum(i => i.Quantity)
+                                ));
+                    }
+                    else
+                    {
+                        idsToRemove.Add(orderId);
+                    }
+                }
+                catch
+                {
+                    idsToRemove.Add(orderId);
+                }
+            }
+
+            foreach (var id in idsToRemove)
+            {
+                await RecentOrdersService.RemoveOrderAsync(id);
+            }
+
+            _orders = orders;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string GetPaymentStatusText(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => "Unpaid",
+        PaymentStatus.Paid => "Paid",
+        PaymentStatus.Failed => "Failed",
+        PaymentStatus.Refunded => "Refunded",
+        _ => status.ToString()
+    };
+
+    private static Badge.BadgeVariant GetBadgeVariant(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Pending => Badge.BadgeVariant.Warning,
+        PaymentStatus.Paid => Badge.BadgeVariant.Success,
+        PaymentStatus.Failed => Badge.BadgeVariant.Danger,
+        PaymentStatus.Refunded => Badge.BadgeVariant.Neutral,
+        _ => Badge.BadgeVariant.Neutral
+    };
+}

@@ -1,0 +1,20 @@
+.callout-dismiss {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-default);
+    margin-left: auto;
+}
+
+.callout-dismiss:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text);
+}

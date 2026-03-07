@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using OrderUp.API.Data.Entities;
 
 namespace OrderUp.API.Data
 {
-    public class DataContext : DbContext
+    public class DataContext : IdentityDbContext<IdentityUser>
     {
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
@@ -13,6 +15,7 @@ namespace OrderUp.API.Data
         public DbSet<Product> Products => Set<Product>();
         public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
         public DbSet<Addon> Addons => Set<Addon>();
+        public DbSet<ProductAddon> ProductAddons => Set<ProductAddon>();
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<OrderItem> OrderItems => Set<OrderItem>();
         public DbSet<OrderItemAddon> OrderItemAddons => Set<OrderItemAddon>();
@@ -33,6 +36,24 @@ namespace OrderUp.API.Data
                 .HasMany(p => p.Variants)
                 .WithOne(v => v.Product)
                 .HasForeignKey(v => v.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ProductAddon junction table (composite PK)
+            modelBuilder.Entity<ProductAddon>()
+                .HasKey(pa => new { pa.ProductId, pa.AddonId });
+
+            // Product -> ProductAddons (1-many, cascade delete)
+            modelBuilder.Entity<ProductAddon>()
+                .HasOne(pa => pa.Product)
+                .WithMany(p => p.ProductAddons)
+                .HasForeignKey(pa => pa.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Addon -> ProductAddons (1-many, cascade delete)
+            modelBuilder.Entity<ProductAddon>()
+                .HasOne(pa => pa.Addon)
+                .WithMany(a => a.ProductAddons)
+                .HasForeignKey(pa => pa.AddonId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Order -> Items (1-many)
@@ -103,6 +124,10 @@ namespace OrderUp.API.Data
             // Performance indexes
             modelBuilder.Entity<Order>()
                 .HasIndex(o => o.CreatedAtUtc);
+
+            // Index on PaymentSessionId for webhook order lookup
+            modelBuilder.Entity<Order>()
+                .HasIndex(o => o.PaymentSessionId);
         }
     }
 }

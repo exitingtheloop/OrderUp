@@ -10,6 +10,7 @@ public static class MenuSeeder
         await SeedCategoriesAsync(context);
         await SeedProductsAsync(context);
         await SeedAddonsAsync(context);
+        await SeedProductAddonsAsync(context);
     }
 
     private static async Task SeedCategoriesAsync(DataContext context)
@@ -46,6 +47,7 @@ public static class MenuSeeder
                 Name = "Americano",
                 Description = "Espresso with hot water",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/americano.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 95.00m, IsDefault = true, IsAvailable = true },
@@ -59,6 +61,7 @@ public static class MenuSeeder
                 Name = "Cafe Latte",
                 Description = "Espresso with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/latte.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 110.00m, IsDefault = true, IsAvailable = true },
@@ -72,6 +75,7 @@ public static class MenuSeeder
                 Name = "Cappuccino",
                 Description = "Espresso with steamed milk foam",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/cappuccino.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 110.00m, IsDefault = true, IsAvailable = true },
@@ -87,6 +91,7 @@ public static class MenuSeeder
                 Name = "Matcha Latte",
                 Description = "Japanese green tea with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/matcha.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 120.00m, IsDefault = true, IsAvailable = true },
@@ -100,6 +105,7 @@ public static class MenuSeeder
                 Name = "Hot Chocolate",
                 Description = "Rich chocolate with steamed milk",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/hotchocolate.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Small", Price = 100.00m, IsDefault = true, IsAvailable = true },
@@ -115,6 +121,7 @@ public static class MenuSeeder
                 Name = "Croissant",
                 Description = "Buttery French pastry",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/croissant.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Regular", Price = 85.00m, IsDefault = true, IsAvailable = true }
@@ -126,6 +133,7 @@ public static class MenuSeeder
                 Name = "Chocolate Muffin",
                 Description = "Rich chocolate muffin",
                 IsAvailable = true,
+                ImageUrl = "https://s3.us-west-1.wasabisys.com/orderup/muffin.png",
                 Variants = new List<ProductVariant>
                 {
                     new() { Name = "Regular", Price = 75.00m, IsDefault = true, IsAvailable = true }
@@ -153,5 +161,69 @@ public static class MenuSeeder
 
         context.Addons.AddRange(addons);
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedProductAddonsAsync(DataContext context)
+    {
+        // Load all products with their categories
+        var products = await context.Products
+            .Include(p => p.Category)
+            .ToListAsync();
+
+        // Load all addons
+        var addons = await context.Addons.ToListAsync();
+
+        // Load existing mappings to ensure idempotency
+        var existingMappingsList = await context.ProductAddons
+            .Select(pa => new { pa.ProductId, pa.AddonId })
+            .ToListAsync();
+        var existingMappings = existingMappingsList
+            .Select(x => (x.ProductId, x.AddonId))
+            .ToHashSet();
+
+        // Define addon eligibility by group per category
+        // Coffee: all addons (Espresso, Milk, Syrup, Toppings)
+        // Non-Coffee: Milk, Syrup, Toppings (no Espresso/Extra Shot)
+        // Pastries: Toppings only
+
+        var coffeeGroups = new HashSet<string> { "Espresso", "Milk", "Syrup", "Toppings" };
+        var nonCoffeeGroups = new HashSet<string> { "Milk", "Syrup", "Toppings" };
+        var pastryGroups = new HashSet<string> { "Toppings" };
+
+        var productAddonsToAdd = new List<ProductAddon>();
+
+        foreach (var product in products)
+        {
+            var allowedGroups = product.Category.Name switch
+            {
+                "Coffee" => coffeeGroups,
+                "Non-Coffee" => nonCoffeeGroups,
+                "Pastries" => pastryGroups,
+                _ => new HashSet<string>() // Unknown categories get no addons
+            };
+
+            foreach (var addon in addons)
+            {
+                // Skip if addon group is not allowed for this category
+                if (!allowedGroups.Contains(addon.Group))
+                    continue;
+
+                // Skip if mapping already exists (idempotency)
+                if (existingMappings.Contains((product.Id, addon.Id)))
+                    continue;
+
+                productAddonsToAdd.Add(new ProductAddon
+                {
+                    ProductId = product.Id,
+                    AddonId = addon.Id
+                });
+            }
+        }
+
+        if (productAddonsToAdd.Count > 0)
+        {
+            context.ProductAddons.AddRange(productAddonsToAdd);
+            await context.SaveChangesAsync();
+        }
     }
 }

@@ -1,0 +1,52 @@
+@*
+    PlaceholderImage Component
+    A neutral placeholder with a modern image icon.
+  
+    Usage:
+    <PlaceholderImage />
+ <PlaceholderImage Size="PlaceholderSize.Large" />
+    <PlaceholderImage Width="200" Height="150" />
+*@
+
+<div class="placeholder-image @SizeClass" style="@CustomStyle" role="img" aria-label="@(Alt ?? "Image placeholder")">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="M21 15l-5-5L5 21" />
+    </svg>
+</div>
+
+@code {
+    [Parameter]
+    public PlaceholderSize Size { get; set; } = PlaceholderSize.Medium;
+
+    [Parameter]
+    public int? Width { get; set; }
+
+    [Parameter]
+    public int? Height { get; set; }
+
+    [Parameter]
+    public string? Alt { get; set; }
+
+    private string SizeClass => (Width.HasValue || Height.HasValue) ? "" : Size switch
+    {
+        PlaceholderSize.Small => "placeholder-image-sm",
+        PlaceholderSize.Medium => "placeholder-image-md",
+        PlaceholderSize.Large => "placeholder-image-lg",
+        PlaceholderSize.XLarge => "placeholder-image-xl",
+        _ => "placeholder-image-md"
+    };
+
+    private string CustomStyle => (Width.HasValue || Height.HasValue)
+        ? $"width: {Width ?? Height}px; height: {Height ?? Width}px;"
+  : "";
+
+    public enum PlaceholderSize
+    {
+        Small,   // 48px
+        Medium,  // 64-80px
+        Large,   // 100-120px
+        XLarge   // 160px
+    }
+}

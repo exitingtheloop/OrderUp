@@ -1,0 +1,66 @@
+@*
+    EmptyState Component
+    A calm, sophisticated empty state using design system.
+*@
+
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            @switch (IconType)
+            {
+                case EmptyIcon.Cart:
+                    <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    break;
+                case EmptyIcon.Order:
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    break;
+                case EmptyIcon.Search:
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                    break;
+                default:
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 9h18M9 21V9" />
+                    break;
+            }
+        </svg>
+    </div>
+    <h3 class="empty-state-title">@Title</h3>
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <p class="empty-state-text">@Description</p>
+    }
+    @if (!string.IsNullOrEmpty(ActionText) && !string.IsNullOrEmpty(ActionHref))
+    {
+        <a href="@ActionHref" class="btn btn-primary btn-md">@ActionText</a>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string? ActionText { get; set; }
+
+    [Parameter]
+    public string? ActionHref { get; set; }
+
+    [Parameter]
+    public EmptyIcon IconType { get; set; } = EmptyIcon.Default;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    public enum EmptyIcon
+    {
+        Default,
+        Cart,
+        Order,
+        Search
+    }
+}

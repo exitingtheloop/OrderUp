@@ -1,0 +1,41 @@
+@* 
+    PriceDisplay Component
+    A consistent way to display prices throughout the app.
+    
+    Usage:
+    <PriceDisplay Amount="123.45" />
+    <PriceDisplay Amount="123.45" Size="PriceSize.Large" />
+    <PriceDisplay Amount="123.45" ShowPlus="true" />
+*@
+@using OrderUp.Client.Services
+@inject AppSettingsService AppSettings
+
+<span class="price @SizeClass">@(ShowPlus && Amount > 0 ? "+" : "")@AppSettings.CurrencySymbol@Amount.ToString("N2")</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public decimal Amount { get; set; }
+
+    [Parameter]
+    public PriceSize Size { get; set; } = PriceSize.Base;
+
+    [Parameter]
+    public bool ShowPlus { get; set; } = false;
+
+    private string SizeClass => Size switch
+    {
+        PriceSize.Small => "price-sm",
+        PriceSize.Base => "price-base",
+        PriceSize.Large => "price-lg",
+        PriceSize.ExtraLarge => "price-xl",
+        _ => "price-base"
+    };
+
+    public enum PriceSize
+    {
+        Small,
+        Base,
+        Large,
+        ExtraLarge
+    }
+}
