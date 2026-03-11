@@ -1,7 +1,9 @@
 ﻿@using OrderUp.Client.State
+@using OrderUp.Client.Services
 @inject CartState Cart
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
 @implements IDisposable
 
 @* Mobile Overlay Backdrop *@
@@ -19,7 +21,7 @@
                     <path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
                 </svg>
             </div>
-            <span class="brand-name">OrderUp</span>
+            <span class="brand-name">@AppSettings.CafeName</span>
         </a>
         <button type="button" class="sidebar-toggle" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

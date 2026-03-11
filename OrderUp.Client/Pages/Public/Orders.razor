@@ -6,8 +6,9 @@
 @using OrderUp.Shared.Enums
 @inject RecentOrdersService RecentOrdersService
 @inject OrdersApi OrdersApi
+@inject AppSettingsService AppSettings
 
-<PageTitle>OrderUp - My Orders</PageTitle>
+<PageTitle>@AppSettings.CafeName - My Orders</PageTitle>
 
 <div class="orders-page">
     <header class="page-header">

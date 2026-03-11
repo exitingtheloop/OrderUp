@@ -7,8 +7,9 @@
 @inject MenuApi MenuApi
 @inject CartState Cart
 @inject IToastService ToastService
+@inject AppSettingsService AppSettings
 
-<PageTitle>OrderUp - Menu</PageTitle>
+<PageTitle>@AppSettings.CafeName - Menu</PageTitle>
 
 <div class="menu-page">
     @if (_loading)
@@ -154,7 +155,7 @@
                     <div class="modal-image-placeholder">
                         <img src="@_selectedProduct.ImageUrl" />
                     </div>
-                    
+
                 </div>
                 <div class="modal-product-info">
                     <h2 class="modal-product-name">@_selectedProduct.Name</h2>
@@ -418,15 +419,15 @@
                 .Where(kvp => kvp.Value > 0)
                 .Select(kvp =>
                 {
-                     var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
-                     return new CartItemAddon
-                     {
-                         AddonId = addon.Id,
-                         Name = addon.Name,
-                         Group = addon.Group,
-                         UnitPrice = addon.Price,
-                         Quantity = kvp.Value
-                     };
+                    var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
+                    return new CartItemAddon
+                    {
+                        AddonId = addon.Id,
+                        Name = addon.Name,
+                        Group = addon.Group,
+                        UnitPrice = addon.Price,
+                        Quantity = kvp.Value
+                    };
                 })
               .ToList()
         };

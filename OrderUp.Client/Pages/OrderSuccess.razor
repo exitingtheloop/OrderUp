@@ -13,7 +13,7 @@
 @inject AppSettingsService AppSettings
 @inject IJSRuntime JS
 
-<PageTitle>Order #@OrderId - OrderUp</PageTitle>
+<PageTitle>Order #@OrderId - @AppSettings.CafeName</PageTitle>
 
 <div class="order-page">
     @if (_isLoading)

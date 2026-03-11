@@ -1,6 +1,7 @@
 @page "/admin/addons"
 @using OrderUp.Client.Services
 @using OrderUp.Client.State
+@using OrderUp.Client.Components
 @using OrderUp.Shared.Contracts.Menu.Requests
 @using OrderUp.Shared.Contracts.Menu.Responses
 @inject AdminApi AdminApi
@@ -12,7 +13,7 @@
 
 @if (!isAuthorized)
 {
-    <p><em>Checking authorization...</em></p>
+    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Centered="true" />
 }
 else
 {

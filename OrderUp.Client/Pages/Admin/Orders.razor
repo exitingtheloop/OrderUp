@@ -1,6 +1,7 @@
 @page "/admin/orders"
 @using OrderUp.Client.Services
 @using OrderUp.Client.State
+@using OrderUp.Client.Components
 @using OrderUp.Shared.Contracts.Orders.Responses
 @using OrderUp.Shared.Contracts.Orders.Requests
 @using OrderUp.Shared.Enums
@@ -14,7 +15,7 @@
 
 @if (!isAuthorized)
 {
-    <p><em>Checking authorization...</em></p>
+    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Centered="true" />
 }
 else
 {

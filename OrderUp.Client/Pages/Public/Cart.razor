@@ -12,8 +12,9 @@
 @inject PendingOrderService PendingOrderService
 @inject RecentOrdersService RecentOrdersService
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
 
-<PageTitle>OrderUp - Cart</PageTitle>
+<PageTitle>@AppSettings.CafeName - Cart</PageTitle>
 
 <div class="cart-page">
     <header class="page-header">
@@ -66,7 +67,7 @@
                 {
                     <div class="cart-item">
                         @*<PlaceholderImage Size="PlaceholderImage.PlaceholderSize.Medium" Alt="@item.ProductName" />*@
-                        <img style="height:80px;width:80px" src="@item.ImageUrl"/>
+                        <img style="height:80px;width:80px" src="@item.ImageUrl" />
                         <div class="cart-item-content">
                             <div class="cart-item-header">
                                 <span class="cart-item-name">@item.ProductName</span>

@@ -1,10 +1,12 @@
 @page "/admin/login"
 @using OrderUp.Client.State
+@using OrderUp.Client.Services
 @using OrderUp.Client.Shared.Ui
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject AppSettingsService AppSettings
 
-<PageTitle>Admin Login - OrderUp</PageTitle>
+<PageTitle>Admin Login - @AppSettings.CafeName</PageTitle>
 
 <div class="login-page">
     <div class="login-container">

@@ -73,40 +73,43 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Apply migrations and seed database on startup
-using (var scope = app.Services.CreateScope())
+// Apply migrations and seed database on startup (skip in Testing - handled by test factory)
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    var configuration = services.GetRequiredService<IConfiguration>();
-
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        // Apply pending migrations
-        var context = services.GetRequiredService<DataContext>();
-        logger.LogInformation("Applying database migrations...");
-        await context.Database.MigrateAsync();
-        logger.LogInformation("Database migrations applied successfully.");
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        var configuration = services.GetRequiredService<IConfiguration>();
 
-        // Seed Identity (roles and admin user) - always run
-        var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        await IdentitySeeder.SeedAsync(userManager, roleManager, configuration);
-        logger.LogInformation("Identity seeding completed.");
-
-        // Seed demo menu data only in Development or if explicitly enabled via config
-        var seedDemoData = configuration.GetValue<bool>("SeedDemoData");
-        if (app.Environment.IsDevelopment() || seedDemoData)
+        try
         {
-            logger.LogInformation("Seeding demo menu data...");
-            await MenuSeeder.SeedAsync(context);
-            logger.LogInformation("Demo menu data seeded.");
+            // Apply pending migrations
+            var context = services.GetRequiredService<DataContext>();
+            logger.LogInformation("Applying database migrations...");
+            await context.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully.");
+
+            // Seed Identity (roles and admin user) - always run
+            var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+            var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+            await IdentitySeeder.SeedAsync(userManager, roleManager, configuration);
+            logger.LogInformation("Identity seeding completed.");
+
+            // Seed demo menu data only in Development or if explicitly enabled via config
+            var seedDemoData = configuration.GetValue<bool>("SeedDemoData");
+            if (app.Environment.IsDevelopment() || seedDemoData)
+            {
+                logger.LogInformation("Seeding demo menu data...");
+                await MenuSeeder.SeedAsync(context);
+                logger.LogInformation("Demo menu data seeded.");
+            }
         }
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-        throw;
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+            throw;
+        }
     }
 }
 
