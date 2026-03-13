@@ -52,6 +52,5 @@ jobs:
         with:
           app-name: 'OrderUp-taskmaxi'
           slot-name: 'Production'
-          package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C16BD7E822624E5197BAA17FF768F267 }}
           package: app
