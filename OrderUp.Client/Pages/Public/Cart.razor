@@ -17,160 +17,224 @@
 <PageTitle>@AppSettings.CafeName - Cart</PageTitle>
 
 <div class="cart-page">
-    <header class="page-header">
-        <h1 class="page-title">Cart</h1>
-    </header>
-
-    @* Unpaid Orders - Subtle Callout *@
-    @if (_unpaidOrders.Count > 0)
-    {
-        <div class="unpaid-orders-callout">
-            <Callout Variant="Callout.CalloutVariant.Warning" Title="@(_unpaidOrders.Count == 1 ? "You have an unpaid order" : $"You have {_unpaidOrders.Count} unpaid orders")">
-                <div class="unpaid-orders-list">
-                    @foreach (var order in _unpaidOrders)
-                    {
-                        <a href="/order-success/@order.Id" class="unpaid-order-item">
-                            <div class="unpaid-order-info">
-                                <span class="unpaid-order-id">Order #@order.Id</span>
-                                <span class="unpaid-order-date">@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
-                            </div>
-                            <div class="unpaid-order-right">
-                                <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
-                                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M9 5l7 7-7 7" />
-                                </svg>
-                            </div>
-                        </a>
-                    }
-                </div>
-            </Callout>
-        </div>
+    @* Dark hero header *@
+    <section class="cart-hero">
+        <div class="cart-hero-inner">
+   <div class="cart-hero-label">
+ <span>Your Order</span>
+</div>
+ <h1 class="cart-hero-title">Cart</h1>
+       @if (!CartState.IsEmpty)
+         {
+      <p class="cart-hero-subtitle">@CartState.Items.Count item@(CartState.Items.Count != 1 ? "s" : "") in your cart</p>
     }
+      </div>
+    </section>
 
     @if (CartState.IsEmpty)
     {
-        <EmptyState IconType="EmptyState.EmptyIcon.Cart"
-                    Title="Your cart is empty"
-                    Description="Browse our menu and add items to get started.">
-            <div class="empty-actions">
-                <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
-                <a href="/orders" class="btn btn-secondary btn-md">View Orders</a>
-            </div>
-        </EmptyState>
+        <div class="cart-body">
+            @if (_unpaidOrders.Count > 0)
+     {
+            <div class="unpaid-panel">
+              <div class="unpaid-panel-header">
+     <svg class="unpaid-panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+        <span class="unpaid-panel-title">@(_unpaidOrders.Count == 1 ? "You have an unpaid order" : $"You have {_unpaidOrders.Count} unpaid orders")</span>
+         </div>
+       <div class="unpaid-orders-list">
+     @foreach (var order in _unpaidOrders)
+      {
+       <a href="/order-success/@order.Id" class="unpaid-order-item">
+          <div class="unpaid-order-info">
+         <span class="unpaid-order-id">Order #@order.Id</span>
+     <span class="unpaid-order-date">@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                   </div>
+         <div class="unpaid-order-right">
+      <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
+           <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <path d="M9 5l7 7-7 7" />
+    </svg>
+  </div>
+   </a>
+}
+         </div>
+    </div>
+        }
+
+    <div class="cart-empty-wrap dark-empty-state">
+           <EmptyState IconType="EmptyState.EmptyIcon.Cart"
+              ImageUrl="https://s3.us-west-1.wasabisys.com/orderup/empty-cart.png"
+              Title="Your cart is empty"
+         Description="Browse our menu and add items to get started.">
+          <div class="empty-actions">
+                  <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
+            <a href="/orders" class="btn btn-secondary btn-md">View Orders</a>
+         </div>
+       </EmptyState>
+    </div>
+        </div>
     }
     else
     {
-        @* Cart Items *@
-        <section class="cart-section">
-            <div class="cart-items">
-                @foreach (var item in CartState.Items)
-                {
-                    <div class="cart-item">
-                        @*<PlaceholderImage Size="PlaceholderImage.PlaceholderSize.Medium" Alt="@item.ProductName" />*@
-                        <img style="height:80px;width:80px" src="@item.ImageUrl" />
-                        <div class="cart-item-content">
-                            <div class="cart-item-header">
-                                <span class="cart-item-name">@item.ProductName</span>
-                                <span class="cart-item-price">
-                                    <PriceDisplay Amount="@item.LineTotal" Size="PriceDisplay.PriceSize.Base" />
-                                </span>
-                            </div>
-                            <span class="cart-item-variant">@item.VariantName</span>
-
-                            @if (item.Addons.Count > 0)
-                            {
-                                <div class="cart-item-addons">
-                                    @foreach (var addon in item.Addons)
-                                    {
-                                        <span class="addon-tag">@(addon.Quantity > 1 ? $"{addon.Quantity}× " : "")@addon.Name</span>
-                                    }
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(item.Notes))
-                            {
-                                <div class="cart-item-notes">"@item.Notes"</div>
-                            }
-
-                            <div class="cart-item-controls">
-                                <QuantityStepper Value="@item.Quantity"
-                                                 Min="1"
-                                                 OnChange="(qty) => UpdateQuantity(item, qty)" />
-                                <button type="button" class="remove-btn" @onclick="() => RemoveItem(item)">Remove</button>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <div class="cart-summary">
-                <div class="cart-total-row">
-                    <span class="cart-total-label">Total</span>
-                    <PriceDisplay Amount="@CartState.Total()" Size="PriceDisplay.PriceSize.ExtraLarge" />
+        <div class="cart-body-wide">
+      @if (_unpaidOrders.Count > 0)
+  {
+      <div class="unpaid-panel">
+            <div class="unpaid-panel-header">
+       <svg class="unpaid-panel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+       <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+         </svg>
+             <span class="unpaid-panel-title">@(_unpaidOrders.Count == 1 ? "You have an unpaid order" : $"You have {_unpaidOrders.Count} unpaid orders")</span>
+          </div>
+         <div class="unpaid-orders-list">
+    @foreach (var order in _unpaidOrders)
+  {
+           <a href="/order-success/@order.Id" class="unpaid-order-item">
+  <div class="unpaid-order-info">
+ <span class="unpaid-order-id">Order #@order.Id</span>
+      <span class="unpaid-order-date">@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
                 </div>
-            </div>
-        </section>
+      <div class="unpaid-order-right">
+           <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
+     <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M9 5l7 7-7 7" />
+         </svg>
+      </div>
+             </a>
+    }
+         </div>
+         </div>
+            }
 
-        @* Customer Information *@
-        <section class="form-section">
-            <h2 class="section-heading">Your details</h2>
+          <div class="cart-content-grid">
+   @* Cart Items Column *@
+  <section class="cart-items-col">
+         <div class="cart-items">
+           @foreach (var item in CartState.Items)
+     {
+         <div class="cart-item">
+  <div class="cart-item-image">
+             <img src="@item.ImageUrl" alt="@item.ProductName" />
+         </div>
+   <div class="cart-item-content">
+       <div class="cart-item-header">
+    <span class="cart-item-name">@item.ProductName</span>
+            <span class="cart-item-price">
+   <PriceDisplay Amount="@item.LineTotal" Size="PriceDisplay.PriceSize.Base" />
+             </span>
+           </div>
+          <span class="cart-item-variant">@item.VariantName</span>
 
-            <div class="form-card">
-                <div class="form-group">
-                    <label class="label">Name <span class="required">*</span></label>
-                    <input type="text"
-                           class="input @(string.IsNullOrWhiteSpace(_customerName) && _submitted ? "is-invalid" : "")"
-                           placeholder="Your name"
-                           @bind="_customerName">
-                    @if (string.IsNullOrWhiteSpace(_customerName) && _submitted)
-                    {
-                        <div class="error-text">Name is required</div>
-                    }
-                </div>
-
-                <div class="form-group">
-                    <label class="label">Phone <span class="required">*</span></label>
-                    <input type="tel"
-                           class="input @(string.IsNullOrWhiteSpace(_customerPhone) && _submitted ? "is-invalid" : "")"
-                           placeholder="Your phone number"
-                           @bind="_customerPhone">
-                    @if (string.IsNullOrWhiteSpace(_customerPhone) && _submitted)
-                    {
-                        <div class="error-text">Phone is required</div>
-                    }
-                </div>
-
-                <div class="form-group">
-                    <label class="label">Pickup time <span class="optional">(optional)</span></label>
-                    <input type="datetime-local"
-                           class="input"
-                           min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
-                           @bind="_pickupTime">
-                    <div class="hint">Leave blank for ASAP pickup</div>
-                </div>
-            </div>
-        </section>
-
-        @* Error Message *@
-        @if (!string.IsNullOrEmpty(_errorMessage))
+      @if (item.Addons.Count > 0)
+ {
+           <div class="cart-item-addons">
+               @foreach (var addon in item.Addons)
         {
-            <Callout Variant="Callout.CalloutVariant.Danger">@_errorMessage</Callout>
+  <span class="addon-tag">@(addon.Quantity > 1 ? $"{addon.Quantity}x " : "")@addon.Name</span>
         }
+         </div>
+             }
 
-        @* Actions *@
-        <div class="page-actions">
-            <a href="/" class="btn btn-secondary btn-md">Continue shopping</a>
-            <button class="btn btn-primary btn-lg" @onclick="SubmitOrder" disabled="@_submitting">
-                @if (_submitting)
-                {
-                    <span class="spinner spinner-sm"></span>
-                    <span>@_submitStatus</span>
-                }
-                else
-                {
-                    <span>Place order</span>
-                }
-            </button>
+        @if (!string.IsNullOrEmpty(item.Notes))
+                   {
+           <div class="cart-item-notes">"@item.Notes"</div>
+           }
+
+      <div class="cart-item-controls">
+         <QuantityStepper Value="@item.Quantity"
+       Min="1"
+          OnChange="(qty) => UpdateQuantity(item, qty)" />
+    <button type="button" class="remove-btn" @onclick="() => RemoveItem(item)">Remove</button>
+            </div>
+          </div>
+      </div>
+     }
+        </div>
+
+              <a href="/" class="continue-link">
+   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+   <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Continue shopping
+         </a>
+           </section>
+
+    @* Checkout Sidebar *@
+<aside class="checkout-col">
+           <div class="checkout-card">
+       <h2 class="checkout-title">Checkout</h2>
+
+<div class="checkout-form">
+     <div class="form-group">
+              <label class="label">Name <span class="required">*</span></label>
+    <input type="text"
+            class="input @(string.IsNullOrWhiteSpace(_customerName) && _submitted ? "is-invalid" : "")"
+ placeholder="Your name"
+    @bind="_customerName">
+       @if (string.IsNullOrWhiteSpace(_customerName) && _submitted)
+     {
+   <div class="error-text">Name is required</div>
+    }
+            </div>
+
+           <div class="form-group">
+      <label class="label">Phone <span class="required">*</span></label>
+         <input type="tel"
+   class="input @(string.IsNullOrWhiteSpace(_customerPhone) && _submitted ? "is-invalid" : "")"
+         placeholder="Your phone number"
+   @bind="_customerPhone">
+    @if (string.IsNullOrWhiteSpace(_customerPhone) && _submitted)
+          {
+     <div class="error-text">Phone is required</div>
+      }
+     </div>
+
+  <div class="form-group">
+   <label class="label">Pickup time <span class="optional">(optional)</span></label>
+  <input type="datetime-local"
+    class="input"
+      min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+            @bind="_pickupTime">
+       <div class="hint">Leave blank for ASAP pickup</div>
+          </div>
+     </div>
+
+            <div class="checkout-divider"></div>
+
+          <div class="checkout-summary">
+     <div class="summary-row">
+     <span class="summary-label">Subtotal</span>
+  <PriceDisplay Amount="@CartState.Total()" Size="PriceDisplay.PriceSize.Base" />
+             </div>
+ <div class="summary-row summary-total">
+          <span class="summary-total-label">Total</span>
+           <PriceDisplay Amount="@CartState.Total()" Size="PriceDisplay.PriceSize.ExtraLarge" />
+ </div>
+            </div>
+
+              @if (!string.IsNullOrEmpty(_errorMessage))
+                 {
+       <div class="checkout-error">
+          <Callout Variant="Callout.CalloutVariant.Danger">@_errorMessage</Callout>
+   </div>
+   }
+
+        <button class="btn btn-primary btn-lg checkout-btn" @onclick="SubmitOrder" disabled="@_submitting">
+   @if (_submitting)
+         {
+   <span class="spinner spinner-sm"></span>
+           <span>@_submitStatus</span>
+                  }
+      else
+    {
+            <span>Place order</span>
+              }
+           </button>
+             </div>
+                </aside>
+            </div>
         </div>
     }
 </div>

@@ -184,10 +184,6 @@ else
             opacity: 0.5;
         }
     }
-
-    .order-stats {
-        font-size: 0.9rem;
-    }
 </style>
 
 @code {
@@ -310,13 +306,13 @@ else
 
     private static string GetOrderCardClass(OrderStatus status) => status switch
     {
-        OrderStatus.Pending => "border-warning",
-        OrderStatus.Confirmed => "border-info",
-        OrderStatus.Preparing => "border-primary",
-        OrderStatus.Ready => "border-success",
-        OrderStatus.Completed => "border-secondary",
-        OrderStatus.Cancelled => "border-danger",
-        _ => ""
+        OrderStatus.Pending => "order-card order-card-pending",
+        OrderStatus.Confirmed => "order-card order-card-confirmed",
+        OrderStatus.Preparing => "order-card order-card-preparing",
+        OrderStatus.Ready => "order-card order-card-ready",
+        OrderStatus.Completed => "order-card order-card-completed",
+        OrderStatus.Cancelled => "order-card order-card-cancelled",
+        _ => "order-card"
     };
 
     private static string GetStatusBadgeClass(OrderStatus status) => status switch

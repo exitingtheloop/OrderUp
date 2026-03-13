@@ -3,154 +3,141 @@
 @inject CartState Cart
 @inject AuthState AuthState
 @inject NavigationManager Navigation
-@inject AppSettingsService AppSettings
 @implements IDisposable
 
 @* Mobile Overlay Backdrop *@
 @if (!collapseNavMenu)
 {
-    <div class="sidebar-overlay" @onclick="ToggleNavMenu"></div>
+    <div class="navbar-overlay" @onclick="ToggleNavMenu"></div>
 }
 
-<div class="sidebar">
-    @* Brand Header *@
-    <div class="sidebar-header">
-        <a class="sidebar-brand" href="">
-            <div class="brand-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 8h1a4 4 0 110 8h-1M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3" />
-                </svg>
-            </div>
-            <span class="brand-name">@AppSettings.CafeName</span>
+<nav class="navbar">
+    <div class="navbar-inner">
+        @* Brand — always left *@
+        <a class="navbar-brand" href="">
+            <span class="navbar-brand-name">OrderUp</span>
+            @if (_isAdminPage)
+            {
+                <span class="navbar-admin-badge">Admin</span>
+            }
         </a>
-        <button type="button" class="sidebar-toggle" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+        @* Desktop Nav Links *@
+        <div class="navbar-links">
+            @if (!_isAdminPage)
+            {
+                <NavLink class="navbar-link" href="" Match="NavLinkMatch.All">Menu</NavLink>
+                <NavLink class="navbar-link" href="cart">
+                    Cart
+                    @if (Cart.ItemCount > 0)
+                    {
+                        <span class="navbar-badge">@Cart.ItemCount</span>
+                    }
+                </NavLink>
+                <NavLink class="navbar-link" href="orders">Orders</NavLink>
+            }
+
+            @if (AuthState.IsAdmin)
+            {
+                <div class="navbar-divider"></div>
+                @if (_isAdminPage)
+                {
+                    <NavLink class="navbar-link" href="admin/orders">Dashboard</NavLink>
+                    <NavLink class="navbar-link" href="admin/products">Products</NavLink>
+                    <NavLink class="navbar-link" href="admin/addons">Addons</NavLink>
+                    <NavLink class="navbar-link" href="admin/reports">Reports</NavLink>
+                    <div class="navbar-divider"></div>
+                    <NavLink class="navbar-link" href="">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                        Menu
+                    </NavLink>
+                    <button class="navbar-link navbar-signout" @onclick="Logout">Sign out</button>
+                }
+                else
+                {
+                    <NavLink class="navbar-link" href="admin/orders">Admin</NavLink>
+                }
+            }
+        </div>
+
+        @* Hamburger — mobile only *@
+        <button type="button" class="navbar-toggle" @onclick="ToggleNavMenu" aria-label="Toggle navigation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                 <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+            @if (Cart.ItemCount > 0)
+            {
+                <span class="toggle-badge">@Cart.ItemCount</span>
+            }
         </button>
     </div>
+</nav>
 
-    @* Desktop Navigation - Hidden on mobile *@
-    <nav class="desktop-nav">
-        @RenderNavContent()
-    </nav>
-</div>
-
-@* Mobile Slide-in Panel - Hidden on desktop *@
-<nav class="@MobileNavClass">
-    @* Close button at top right *@
+@* Mobile Slide-in Panel *@
+<div class="mobile-nav @(collapseNavMenu ? "collapsed" : "")">
     <button type="button" class="mobile-nav-close" @onclick="ToggleNavMenu" aria-label="Close menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <path d="M6 18L18 6M6 6l12 12" />
         </svg>
     </button>
 
-    @RenderNavContent()
-</nav>
+    <nav class="mobile-nav-links">
+        <a href="" class="mobile-nav-link" @onclick="CloseMenuOnNavigate">Menu</a>
+        <a href="cart" class="mobile-nav-link" @onclick="CloseMenuOnNavigate">
+            Cart
+            @if (Cart.ItemCount > 0)
+            {
+                <span class="mobile-nav-badge">@Cart.ItemCount</span>
+            }
+        </a>
+        <a href="orders" class="mobile-nav-link" @onclick="CloseMenuOnNavigate">Orders</a>
 
-@code {
-    private bool collapseNavMenu = true;
-
-    private string MobileNavClass => collapseNavMenu ? "mobile-nav collapsed" : "mobile-nav";
-
-    private RenderFragment RenderNavContent() => __builder =>
-    {
-        @* Main Navigation *@
-        <div class="nav-group">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" @onclick="CloseMenuOnNavigate">
-
-                <span class="nav-label">Menu</span>
-            </NavLink>
-
-            <NavLink class="nav-link" href="cart" @onclick="CloseMenuOnNavigate">
-
-                <span class="nav-label">Cart</span>
-                @if (Cart.ItemCount > 0)
-                {
-                    <span class="nav-badge">@Cart.ItemCount</span>
-                }
-            </NavLink>
-
-            <NavLink class="nav-link" href="orders" @onclick="CloseMenuOnNavigate">
-
-                <span class="nav-label">Orders</span>
-            </NavLink>
-        </div>
-
-        @* Admin Section *@
         @if (AuthState.IsAdmin)
         {
-            <div class="nav-divider"></div>
-            <div class="nav-group">
-                <div class="nav-group-label">Admin</div>
+            <div class="mobile-nav-divider"></div>
+            <div class="mobile-nav-section-label">Admin</div>
+            <a href="admin/orders" class="mobile-nav-link-sm" @onclick="CloseMenuOnNavigate">Dashboard</a>
+            <a href="admin/products" class="mobile-nav-link-sm" @onclick="CloseMenuOnNavigate">Products</a>
+            <a href="admin/addons" class="mobile-nav-link-sm" @onclick="CloseMenuOnNavigate">Addons</a>
+            <a href="admin/reports" class="mobile-nav-link-sm" @onclick="CloseMenuOnNavigate">Reports</a>
 
-                <NavLink class="nav-link" href="admin/orders" @onclick="CloseMenuOnNavigate">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span class="nav-label">Dashboard</span>
-                </NavLink>
-
-                <NavLink class="nav-link" href="admin/products" @onclick="CloseMenuOnNavigate">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <span class="nav-label">Products</span>
-                </NavLink>
-
-                <NavLink class="nav-link" href="admin/addons" @onclick="CloseMenuOnNavigate">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span class="nav-label">Addons</span>
-                </NavLink>
-
-                <NavLink class="nav-link" href="admin/reports" @onclick="CloseMenuOnNavigate">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span class="nav-label">Reports</span>
-                </NavLink>
-            </div>
-
-            @* User Footer *@
-            <div class="sidebar-footer">
-                <div class="user-card">
-                    <div class="user-avatar">
-                        @(AuthState.Email?.Substring(0, 1).ToUpper() ?? "A")
-                    </div>
-                    <div class="user-info">
-                        <span class="user-name">Admin</span>
-                        <span class="user-email">@AuthState.Email</span>
-                    </div>
-                </div>
-                <button type="button" class="btn-signout" @onclick="Logout" title="Sign out">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                </button>
+            <div class="mobile-nav-footer">
+                <span class="mobile-nav-email">@AuthState.Email</span>
+                <button type="button" class="btn btn-ghost btn-sm mobile-nav-signout" @onclick="Logout">Sign out</button>
             </div>
         }
         else
         {
-            <div class="nav-divider"></div>
-            <div class="nav-group">
-                <div class="nav-group-label">Admin</div>
-                <NavLink class="nav-link" href="admin/login" @onclick="CloseMenuOnNavigate">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span class="nav-label">Admin Login</span>
-                </NavLink>
-            </div>
+            <div class="mobile-nav-divider"></div>
+            <a href="admin/login" class="mobile-nav-link-sm" @onclick="CloseMenuOnNavigate">Admin Login</a>
         }
-    };
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    private bool _isAdminPage;
 
     protected override async Task OnInitializedAsync()
     {
         Cart.OnChange += StateHasChanged;
         AuthState.OnChange += StateHasChanged;
+        Navigation.LocationChanged += OnLocationChanged;
         await AuthState.InitializeAsync();
+        _isAdminPage = CheckIsAdminPage();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _isAdminPage = CheckIsAdminPage();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool CheckIsAdminPage()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return relativePath.StartsWith("admin", StringComparison.OrdinalIgnoreCase)
+            && !relativePath.StartsWith("admin/login", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ToggleNavMenu()
@@ -174,5 +161,6 @@
     {
         Cart.OnChange -= StateHasChanged;
         AuthState.OnChange -= StateHasChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

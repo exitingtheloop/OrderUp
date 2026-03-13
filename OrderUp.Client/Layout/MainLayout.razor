@@ -1,18 +1,109 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
 
 <BlazoredToasts Position="ToastPosition.BottomRight"
-                Timeout="3"
-                IconType="IconType.None"
-                ShowProgressBar="false" />
+            Timeout="3"
+             IconType="IconType.None"
+          ShowProgressBar="false" />
 
-<div class="app-shell">
-    <aside class="app-sidebar">
+<div class="app-shell @(_isAdminPage ? "admin-mode" : "")">
+    <header class="app-navbar @(_isHomePage ? "app-navbar-home" : "")">
         <NavMenu />
-    </aside>
+    </header>
 
-    <main class="app-main">
-        <div class="app-content">
+    <main class="app-main @(!_isHomePage ? "has-navbar" : "")">
+        <div class="app-content @(_isAdminPage ? "admin-content" : "")">
             @Body
         </div>
     </main>
 </div>
+
+@code {
+    private bool _isHomePage;
+    private bool _isAdminPage;
+
+    protected override void OnInitialized()
+    {
+        _isHomePage = IsHomePage();
+        _isAdminPage = IsAdminPage();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SetupScrollWatcher();
+        }
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _isHomePage = IsHomePage();
+        _isAdminPage = IsAdminPage();
+        StateHasChanged();
+        // Re-setup scroll watcher when navigating to/from home
+        await InvokeAsync(async () =>
+        {
+            try { await SetupScrollWatcher(); } catch { }
+        });
+    }
+
+    private async Task SetupScrollWatcher()
+    {
+        if (_isHomePage)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    if (window._navScrollHandler) window.removeEventListener('scroll', window._navScrollHandler);
+                    window._navScrollHandler = function() {
+                        var el = document.querySelector('.app-navbar-home');
+                        if (!el) return;
+                        var btn = document.querySelector('.hero-menu-btn');
+                        if (window.scrollY > 100) {
+                            el.classList.add('navbar-visible');
+                            document.body.classList.add('navbar-scrolled');
+                            if (btn) btn.classList.add('hero-btn-hidden');
+                        } else {
+                            el.classList.remove('navbar-visible');
+                            document.body.classList.remove('navbar-scrolled');
+                            if (btn) btn.classList.remove('hero-btn-hidden');
+                        }
+                    };
+                    window.addEventListener('scroll', window._navScrollHandler, { passive: true });
+                    window._navScrollHandler();
+                })();
+            ");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                if (window._navScrollHandler) {
+                    window.removeEventListener('scroll', window._navScrollHandler);
+                    window._navScrollHandler = null;
+                }
+                document.body.classList.remove('navbar-scrolled');
+            ");
+        }
+    }
+
+    private bool IsHomePage()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrEmpty(relativePath) || relativePath == "/";
+    }
+
+    private bool IsAdminPage()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return relativePath.StartsWith("admin", StringComparison.OrdinalIgnoreCase)
+            && !relativePath.StartsWith("admin/login", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -8,10 +8,11 @@
 @inject CartState Cart
 @inject IToastService ToastService
 @inject AppSettingsService AppSettings
+@inject NavigationManager Navigation
 
-<PageTitle>@AppSettings.CafeName - Menu</PageTitle>
+<PageTitle>@AppSettings.CafeName</PageTitle>
 
-<div class="menu-page">
+<div class="storefront">
     @if (_loading)
     {
         <div class="loading-state">
@@ -26,119 +27,292 @@
     }
     else
     {
-        <header class="menu-header">
-            <div class="menu-header-top">
-                <div>
-                    <h1 class="menu-title">Menu</h1>
-                    <p class="menu-subtitle">Fresh coffee & treats, made to order</p>
-                </div>
+        @* ====== HERO SECTION — Fullscreen video background ====== *@
+        <section class="landing-hero" id="hero-section">
+            <video class="hero-video-bg" autoplay muted loop playsinline>
+                <source src="https://s3.us-west-1.wasabisys.com/orderup/hero-video.mp4" type="video/mp4" />
+            </video>
+            <div class="hero-overlay"></div>
+
+            <div class="hero-top-bar">
+                <a class="hero-brand" href="">
+                    <span class="hero-brand-mark">✶</span>
+                    <span class="hero-brand-name">OrderUp</span>
+                </a>
             </div>
 
-            @* Search Bar *@
-            <div class="search-container">
-                <div class="search-input-wrapper">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
+            <div class="hero-side-text hero-side-left">
+                <span>Since 2018</span>
+            </div>
+            <div class="hero-side-text hero-side-right">
+                <span>Makati City, PH</span>
+            </div>
+
+            <div class="hero-center-content">
+                <h1 class="hero-main-title">The Ultimate<br />Cafe Experience</h1>
+            </div>
+
+            <div class="hero-bottom">
+                <div class="hero-tagline">
+                    <p>A cozy space for your coffee with very good pastries.</p>
+                </div>
+
+                <div class="hero-social-links">
+                    <a href="https://instagram.com" target="_blank" rel="noopener" class="hero-social-link" aria-label="Instagram">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+                    </a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener" class="hero-social-link" aria-label="X / Twitter">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                    </a>
+                    <a href="https://linkedin.com" target="_blank" rel="noopener" class="hero-social-link" aria-label="LinkedIn">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                    </a>
+                </div>
+
+                <div class="hero-scroll-down">
+                    <span>Scroll Down</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                        <path d="M6 9l6 6 6-6" />
                     </svg>
-                    <input type="text"
-                           class="search-input"
-                           placeholder="Search menu..."
-                           @bind="_searchQuery"
-                           @bind:event="oninput" />
-                    @if (!string.IsNullOrEmpty(_searchQuery))
-                    {
-                        <button type="button" class="search-clear" @onclick="ClearSearch">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    }
+                </div>
+
+                <div class="hero-bottom-bar">
+                    <a href="#contact-info" class="hero-bottom-location">Location</a>
+                    <a href="#menu" class="hero-bottom-scroll">
+                        <span>Scroll Down</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </a>
                 </div>
             </div>
-        </header>
+        </section>
 
-        @if (!FilteredCategories.Any())
-        {
-            <div class="no-results">
-                <div class="no-results-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="M21 21l-4.35-4.35" />
-                    </svg>
+        @* ====== DARK MENU SECTION — Favorites ====== *@
+        <section class="landing-menu-section" id="menu">
+       <div class="landing-menu-inner">
+           @* Section Header *@
+       <div class="landing-menu-header">
+      <div class="landing-section-label light">
+        <span>Our Menu</span>
+         </div>
+          <h2 class="landing-menu-title">Favorites</h2>
                 </div>
-                <p class="no-results-text">No items match "<strong>@_searchQuery</strong>"</p>
-                <button type="button" class="btn btn-secondary btn-sm" @onclick="ClearSearch">Clear search</button>
-            </div>
-        }
-        else
-        {
-            @foreach (var (category, products) in FilteredCategories)
-            {
-                <section class="menu-section">
-                    <div class="category-header">
-                        <h2 class="category-title">@category.Name</h2>
-                        <span class="category-count">@products.Count item@(products.Count != 1 ? "s" : "")</span>
-                    </div>
 
-                    <div class="product-grid">
-                        @foreach (var product in products)
+   @* Menu Content: Two-column layout (list left, image right) *@
+             <div class="landing-menu-content">
+  <div class="landing-menu-list">
+               @if (!FilteredCategories.Any())
                         {
-                            <article class="product-card" @onclick="() => OpenCustomizer(product)">
-                                @* Image Area with Rotated Placeholder *@
-                                <div class="card-image-area">
-                                    <div class="card-image-wrapper">
-                                        <div class="card-image-placeholder">
-                                            <img src="@product.ImageUrl" />
+                            <div class="no-results dark-no-results">
+                                <p class="no-results-text">No items found</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var (category, products) in FilteredCategories)
+                            {
+                                @foreach (var product in products)
+                                {
+                                    <div class="menu-list-item" @onclick="() => OpenCustomizer(product)">
+                                        <div class="menu-list-item-info">
+                                            <h3 class="menu-list-item-name">@product.Name</h3>
+                                            <p class="menu-list-item-desc">@product.Description</p>
+                                        </div>
+                                        <div class="menu-list-item-right">
+                                            <div class="menu-list-item-price">
+                                                <span class="menu-price-value">₱@product.Variants.Min(v => v.Price).ToString("N2")</span>
+                                            </div>
+                                            <button type="button" class="menu-list-add-btn" @onclick:stopPropagation @onclick="() => OpenCustomizer(product)" aria-label="Add @product.Name">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                                                    <path d="M12 5v14M5 12h14" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
-                                    @* Add Button Overlay *@
-                                    <button type="button"
-                                            class="card-add-btn"
-                                            @onclick:stopPropagation
-                                            @onclick="() => OpenCustomizer(product)"
-                                            aria-label="Add @product.Name">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                            <path d="M12 5v14M5 12h14" />
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                @* Card Content *@
-                                <div class="card-content">
-                                    <h3 class="card-name">@product.Name</h3>
-                                    @if (!string.IsNullOrEmpty(product.Description))
-                                    {
-                                        <p class="card-description">@product.Description</p>
-                                    }
-                                    <div class="card-footer">
-                                        <div class="card-price">
-                                            @if (product.Variants.Count == 1)
-                                            {
-                                                <PriceDisplay Amount="@product.Variants[0].Price" Size="PriceDisplay.PriceSize.Base" />
-                                            }
-                                            else
-                                            {
-                                                <span class="price-from">from </span>
-                                                <PriceDisplay Amount="@product.Variants.Min(v => v.Price)" Size="PriceDisplay.PriceSize.Base" />
-                                            }
-                                        </div>
-                                        @if (product.Variants.Count > 1)
-                                        {
-                                            <span class="card-variants-hint">@product.Variants.Count sizes</span>
-                                        }
-                                    </div>
-                                </div>
-                            </article>
+                                }
+                            }
                         }
                     </div>
-                </section>
-            }
-        }
+                    <div class="landing-menu-visual">
+                        <div class="menu-visual-image-wrapper">
+                            <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80" alt="Coffee" class="menu-visual-image" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @* ====== FULL PRODUCT GRID ====== *@
+        <section class="full-menu-section" id="full-menu">
+            <div class="full-menu-inner">
+   <header class="menu-header">
+    <div class="landing-section-label">
+     <span>Order Now</span>
+</div>
+       <h2 class="full-menu-title">Full Menu</h2>
+      <p class="full-menu-subtitle">Tap any item to customize & add to cart</p>
+          </header>
+
+                @foreach (var (category, products) in FilteredCategories)
+                {
+                    <section class="menu-section">
+                        <div class="category-header">
+                            <h2 class="category-title">@category.Name</h2>
+                            <span class="category-count">@products.Count item@(products.Count != 1 ? "s" : "")</span>
+                        </div>
+
+                        <div class="product-grid">
+                            @foreach (var product in products)
+                            {
+                                <article class="product-card" @onclick="() => OpenCustomizer(product)">
+                                    <div class="card-image-area">
+                                        <div class="card-image-wrapper">
+                                            <div class="card-image-placeholder">
+                                                <img src="@product.ImageUrl" />
+                                            </div>
+                                        </div>
+                                        <button type="button"
+                                                class="card-add-btn"
+                                                @onclick:stopPropagation
+                                                @onclick="() => OpenCustomizer(product)"
+                                                aria-label="Add @product.Name">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                <path d="M12 5v14M5 12h14" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="card-content">
+                                        <h3 class="card-name">@product.Name</h3>
+                                        @if (!string.IsNullOrEmpty(product.Description))
+                                        {
+                                            <p class="card-description">@product.Description</p>
+                                        }
+                                        <div class="card-footer">
+                                            <div class="card-price">
+                                                <PriceDisplay Amount="@product.Variants.Min(v => v.Price)" Size="PriceDisplay.PriceSize.Base" />
+                                            </div>
+                                            @if (product.Variants.Count > 1)
+                                            {
+                                                <span class="card-variants-hint">@product.Variants.Count sizes</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </section>
+
+   @* ====== DARK FOOTER ====== *@
+        <footer class="site-footer" id="contact-info">
+            <div class="footer-inner">
+      <div class="footer-top">
+         <div class="footer-brand">
+         <a class="footer-brand-link" href="">
+          <span class="footer-brand-mark">✶</span>
+         <span class="footer-brand-name">OrderUp</span>
+ </a>
+      <p class="footer-tagline">A cozy space for your coffee with very good pastries.</p>
+ </div>
+
+     <div class="footer-info-grid">
+       <div class="footer-info-item">
+      <svg class="footer-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+         <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+              </svg>
+           <div class="footer-info-text">
+            <span class="footer-info-label">Hours</span>
+    <span class="footer-info-value">Mon–Sat · 7 AM – 8 PM</span>
+  </div>
+ </div>
+   <div class="footer-info-item">
+    <svg class="footer-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+     <circle cx="12" cy="10" r="3" />
+           </svg>
+         <div class="footer-info-text">
+     <span class="footer-info-label">Pickup</span>
+         <span class="footer-info-value">123 Main St, Makati City</span>
+             </div>
+ </div>
+              <div class="footer-info-item">
+     <svg class="footer-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+   <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+        </svg>
+          <div class="footer-info-text">
+ <span class="footer-info-label">Contact</span>
+          <span class="footer-info-value">(02) 8123-4567</span>
+   </div>
+     </div>
+ </div>
+    </div>
+
+            <div class="footer-divider"></div>
+
+     <div class="footer-bottom">
+        <div class="footer-social">
+   <a href="https://instagram.com" target="_blank" rel="noopener" class="footer-social-link" aria-label="Instagram">
+         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+      </a>
+   <a href="https://twitter.com" target="_blank" rel="noopener" class="footer-social-link" aria-label="X / Twitter">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+    </a>
+  <a href="https://linkedin.com" target="_blank" rel="noopener" class="footer-social-link" aria-label="LinkedIn">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+ </a>
+   </div>
+          <span class="footer-copyright">@DateTime.Now.Year OrderUp. All rights reserved.</span>
+          </div>
+  </div>
+        </footer>
     }
 </div>
 
-@* Product Customization Modal *@
+@* ====== FIXED MENU BUTTON — top-right, always visible ====== *@
+<button type="button" class="hero-menu-btn @(Cart.ItemCount > 0 ? "has-items" : "")" @onclick="ToggleNavModal" aria-label="Open navigation">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+    @if (Cart.ItemCount > 0)
+    {
+        <span class="menu-btn-badge">@Cart.ItemCount</span>
+    }
+</button>
+
+@* ====== NAV SLIDE-IN PANEL — Opened by hero + button ====== *@
+@if (_showNavModal)
+{
+    <div class="nav-panel-overlay" @onclick="CloseNavModal"></div>
+}
+<div class="nav-slide-panel @(_showNavModal ? "nav-slide-panel-open" : "")">
+  <button type="button" class="nav-panel-close" @onclick="CloseNavModal" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+ <path d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+
+    <nav style="display:flex;flex-direction:column;gap:0.5rem;">
+    <a href="" @onclick="CloseNavModal" style="display:block;font-family:var(--font-heading);font-size:1.875rem;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;text-transform:uppercase;padding:0.5rem 0;">Menu</a>
+        <a href="cart" @onclick="CloseNavModal" style="display:block;font-family:var(--font-heading);font-size:1.875rem;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;text-transform:uppercase;padding:0.5rem 0;">
+            Cart
+            @if (Cart.ItemCount > 0)
+            {
+                <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:#c8b06c;color:#171412;font-size:11px;font-weight:700;border-radius:9999px;margin-left:0.5rem;vertical-align:middle;">@Cart.ItemCount</span>
+            }
+        </a>
+   <a href="orders" @onclick="CloseNavModal" style="display:block;font-family:var(--font-heading);font-size:1.875rem;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;text-transform:uppercase;padding:0.5rem 0;">Orders</a>
+        <a href="admin/login" @onclick="CloseNavModal" style="display:block;font-family:var(--font-heading);font-size:1.875rem;font-weight:600;color:rgba(255,255,255,0.8);text-decoration:none;text-transform:uppercase;padding:0.5rem 0;">Admin</a>
+    </nav>
+</div>
+
+@* ====== PRODUCT CUSTOMIZATION MODAL ====== *@
 @if (_selectedProduct is not null)
 {
     <div class="modal-overlay" @onclick="CloseCustomizer">
@@ -149,13 +323,11 @@
                 </svg>
             </button>
 
-            @* Modal Hero - Product Image + Info *@
             <div class="modal-hero">
                 <div class="modal-image-area">
                     <div class="modal-image-placeholder">
                         <img src="@_selectedProduct.ImageUrl" />
                     </div>
-
                 </div>
                 <div class="modal-product-info">
                     <h2 class="modal-product-name">@_selectedProduct.Name</h2>
@@ -167,7 +339,6 @@
             </div>
 
             <div class="modal-body">
-                @* Size Selection *@
                 <div class="customizer-section">
                     <div class="section-header">
                         <h3 class="section-label">Size</h3>
@@ -198,7 +369,6 @@
                     </div>
                 </div>
 
-                @* Addons *@
                 @if (_selectedProduct.AllowedAddons.Count > 0)
                 {
                     var addonGroups = _selectedProduct.AllowedAddons.GroupBy(a => a.Group);
@@ -234,7 +404,6 @@
                     }
                 }
 
-                @* Notes *@
                 <div class="customizer-section">
                     <div class="section-header">
                         <h3 class="section-label">Special Instructions</h3>
@@ -248,7 +417,6 @@
                 </div>
             </div>
 
-            @* Sticky Footer *@
             <div class="modal-footer">
                 <div class="modal-total">
                     <span class="total-label">Total</span>
@@ -285,54 +453,53 @@
 @code {
     private MenuDto? _menu;
     private bool _loading = true;
-    private string _searchQuery = "";
+    private bool _showNavModal = false;
 
-    // Customizer state
     private ProductDto? _selectedProduct;
     private int? _selectedVariantId;
     private Dictionary<int, int> _selectedAddons = new();
     private string? _notes;
 
-    // Add-to-cart feedback state
     private bool _isAdding = false;
     private bool _addedSuccess = false;
 
-    // Computed property for filtered categories
     private IEnumerable<(CategoryDto Category, List<ProductDto> Products)> FilteredCategories
     {
-        get
+   get
         {
-            if (_menu is null) return Enumerable.Empty<(CategoryDto, List<ProductDto>)>();
+       if (_menu is null) return Enumerable.Empty<(CategoryDto, List<ProductDto>)>();
 
             return _menu.Categories
-                .Select(category => (
-                    Category: category,
-                    Products: _menu.Products
-                        .Where(p => p.CategoryId == category.Id)
-                        .Where(p => string.IsNullOrEmpty(_searchQuery) ||
-                            p.Name.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                            (p.Description?.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ?? false))
-                        .ToList()
-                ))
-                .Where(x => x.Products.Count > 0);
+ .Select(category => (
+         Category: category,
+          Products: _menu.Products
+      .Where(p => p.CategoryId == category.Id)
+       .ToList()
+       ))
+       .Where(x => x.Products.Count > 0);
         }
     }
 
     protected override async Task OnInitializedAsync()
     {
-        try
+   try
         {
             _menu = await MenuApi.GetMenuAsync();
         }
         finally
-        {
+    {
             _loading = false;
-        }
+}
     }
 
-    private void ClearSearch()
+    private void ToggleNavModal()
     {
-        _searchQuery = "";
+        _showNavModal = !_showNavModal;
+    }
+
+    private void CloseNavModal()
+    {
+        _showNavModal = false;
     }
 
     private void OpenCustomizer(ProductDto product)
@@ -369,13 +536,9 @@
     private void SetAddonQuantity(int addonId, int quantity)
     {
         if (quantity <= 0)
-        {
             _selectedAddons.Remove(addonId);
-        }
         else
-        {
             _selectedAddons[addonId] = quantity;
-        }
     }
 
     private decimal CalculateItemTotal()
@@ -416,33 +579,30 @@
             Quantity = 1,
             Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes,
             Addons = _selectedAddons
-                .Where(kvp => kvp.Value > 0)
-                .Select(kvp =>
-                {
-                    var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
-                    return new CartItemAddon
-                    {
-                        AddonId = addon.Id,
-                        Name = addon.Name,
-                        Group = addon.Group,
-                        UnitPrice = addon.Price,
-                        Quantity = kvp.Value
-                    };
-                })
-              .ToList()
+               .Where(kvp => kvp.Value > 0)
+          .Select(kvp =>
+         {
+             var addon = _selectedProduct.AllowedAddons.First(a => a.Id == kvp.Key);
+             return new CartItemAddon
+             {
+                 AddonId = addon.Id,
+                 Name = addon.Name,
+                 Group = addon.Group,
+                 UnitPrice = addon.Price,
+                 Quantity = kvp.Value
+             };
+         })
+               .ToList()
         };
 
         Cart.AddItem(cartItem);
 
-        // Show success state
         _addedSuccess = true;
         _isAdding = false;
         StateHasChanged();
 
-        // Toast notification
         ToastService.ShowSuccess($"Added {_selectedProduct.Name} to cart");
 
-        // Brief delay then close
         await Task.Delay(600);
         CloseCustomizer();
     }

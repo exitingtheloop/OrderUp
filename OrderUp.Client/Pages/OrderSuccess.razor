@@ -16,192 +16,218 @@
 <PageTitle>Order #@OrderId - @AppSettings.CafeName</PageTitle>
 
 <div class="order-page">
-    @if (_isLoading)
-    {
-        <div class="loading-state">
-            <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading order..." Centered="true" />
+    @* Dark hero header *@
+    <section class="order-hero">
+        <div class="order-hero-inner">
+   <div class="order-hero-label">
+     <span>Order Details</span>
+            </div>
+   <h1 class="order-hero-title">Order #@OrderId</h1>
         </div>
-    }
-    else if (_order is null)
-    {
-        <EmptyState IconType="EmptyState.EmptyIcon.Search"
-                    Title="Order not found"
-                    Description="We couldn't find this order. It may have been removed or the link is incorrect."
-                    ActionText="Back to Menu"
-                    ActionHref="/" />
-    }
-    else
-    {
-        @* Status Banners - Using Callout component (hidden on print) *@
-        <div class="no-print">
-            @if (_resultParam == "cancel")
-            {
-                <div class="status-callout">
-                    <Callout Variant="Callout.CalloutVariant.Warning" Title="Payment cancelled">
-                        Your order is saved. Pay whenever you're ready.
-                    </Callout>
-                </div>
-            }
-            else if (_resultParam == "success" && _isPolling)
-            {
-                <div class="status-banner status-banner-processing">
-                    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
-                    <div class="status-banner-content">
-                        <span class="status-banner-title">Confirming payment</span>
-                        <span class="status-banner-text">Please wait while we verify your payment.</span>
-                    </div>
-                </div>
-            }
-            else if (_order.PaymentStatus == PaymentStatus.Paid)
-            {
-                <div class="status-callout">
-                    <Callout Variant="Callout.CalloutVariant.Success" Title="Payment successful">
-                        Thank you! We're preparing your order now.
-                    </Callout>
-                </div>
-            }
-            else if (_resultParam == "success" && !_isPolling && _order.PaymentStatus == PaymentStatus.Pending)
-            {
-                <div class="status-callout">
-                    <Callout Variant="Callout.CalloutVariant.Info" Title="Payment processing">
-                        Your payment is still being processed. Try refreshing.
-                    </Callout>
-                </div>
-            }
-        </div>
+    </section>
 
-        @* Order Card / Receipt *@
-        <div class="order-card receipt-container">
-            @* Print Header - Only visible on print *@
-            <div class="print-header print-only">
-                <h2 class="print-cafe-name">@AppSettings.CafeName</h2>
+    <div class="order-body dark-empty-state">
+        @if (_isLoading)
+        {
+            <div class="loading-state">
+     <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading order..." Centered="true" />
+ </div>
+        }
+        else if (_order is null)
+        {
+            <EmptyState IconType="EmptyState.EmptyIcon.Search"
+      Title="Order not found"
+     Description="We couldn't find this order. It may have been removed or the link is incorrect."
+              ActionText="Back to Menu"
+  ActionHref="/" />
+        }
+else
+        {
+    @* Status Banners (hidden on print) *@
+          <div class="no-print">
+        @if (_resultParam == "cancel")
+      {
+   <div class="status-alert status-alert-warning">
+       <svg class="status-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+       </svg>
+  <div class="status-alert-content">
+         <p class="status-alert-title">Payment cancelled</p>
+<p class="status-alert-text">Your order is saved. Pay whenever you're ready.</p>
+  </div>
+        </div>
+      }
+        else if (_resultParam == "success" && _isPolling)
+  {
+   <div class="status-banner status-banner-processing">
+    <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
+    <div class="status-banner-content">
+    <span class="status-banner-title">Confirming payment</span>
+        <span class="status-banner-text">Please wait while we verify your payment.</span>
+</div>
+          </div>
+      }
+  else if (_order.PaymentStatus == PaymentStatus.Paid)
+    {
+   <div class="status-alert status-alert-success">
+   <svg class="status-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+     <div class="status-alert-content">
+      <p class="status-alert-title">Payment successful</p>
+        <p class="status-alert-text">Thank you! We're preparing your order now.</p>
+       </div>
+       </div>
+      }
+        else if (_resultParam == "success" && !_isPolling && _order.PaymentStatus == PaymentStatus.Pending)
+       {
+    <div class="status-alert status-alert-info">
+      <svg class="status-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+       <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        <div class="status-alert-content">
+      <p class="status-alert-title">Payment processing</p>
+    <p class="status-alert-text">Your payment is still being processed. Try refreshing.</p>
+         </div>
+   </div>
+    }
             </div>
 
-            <div class="order-card-header">
-                <h1 class="order-number">Order #@_order.Id</h1>
-                <div class="order-badges no-print">
-                    <Badge Variant="@GetOrderBadgeVariant(_order.Status)">@GetStatusText(_order.Status)</Badge>
-                    <Badge Variant="@GetPaymentBadgeVariant(_order.PaymentStatus)">@GetPaymentStatusText(_order.PaymentStatus)</Badge>
-                    @if (_isPolling)
-                    {
-                        <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
-                    }
-                </div>
-                @* Print-only status text *@
-                <div class="print-only print-status">
-                    <span>@GetStatusText(_order.Status) | @GetPaymentStatusText(_order.PaymentStatus)</span>
-                </div>
+            @* Order Card / Receipt *@
+            <div class="order-card receipt-container">
+            @* Print Header *@
+   <div class="print-header print-only">
+         <h2 class="print-cafe-name">@AppSettings.CafeName</h2>
+    </div>
+
+                <div class="order-card-header">
+<div class="order-card-header-left">
+    <h2 class="order-number">Order #@_order.Id</h2>
+          <div class="order-badges no-print">
+          <Badge Variant="@GetOrderBadgeVariant(_order.Status)">@GetStatusText(_order.Status)</Badge>
+           <Badge Variant="@GetPaymentBadgeVariant(_order.PaymentStatus)">@GetPaymentStatusText(_order.PaymentStatus)</Badge>
+  @if (_isPolling)
+          {
+     <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Small" />
+ }
+              </div>
+        </div>
+  @* Print-only status *@
+    <div class="print-only print-status">
+         <span>@GetStatusText(_order.Status) | @GetPaymentStatusText(_order.PaymentStatus)</span>
+            </div>
+           </div>
+
+             <div class="order-card-body">
+     @* Customer Info *@
+  <div class="info-grid">
+     <div class="info-item">
+  <span class="info-label">Customer</span>
+   <span class="info-value">@_order.CustomerName</span>
+          </div>
+              <div class="info-item">
+         <span class="info-label">Phone</span>
+          <span class="info-value">@_order.CustomerPhone</span>
+        </div>
+     <div class="info-item">
+      <span class="info-label">Placed</span>
+   <span class="info-value">@_order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+          </div>
+       <div class="info-item">
+      <span class="info-label">Pickup</span>
+            <span class="info-value">
+         @if (_order.PickupTimeUtc.HasValue)
+       {
+    @_order.PickupTimeUtc.Value.ToLocalTime().ToString("MMM d, h:mm tt")
+  }
+           else
+       {
+    @:ASAP
+     }
+    </span>
+               </div>
             </div>
 
-            <div class="order-card-body">
-                @* Customer Info Grid *@
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">Customer</span>
-                        <span class="info-value">@_order.CustomerName</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Phone</span>
-                        <span class="info-value">@_order.CustomerPhone</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Placed</span>
-                        <span class="info-value">@_order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Pickup</span>
-                        <span class="info-value">
-                            @if (_order.PickupTimeUtc.HasValue)
-                            {
-                                @_order.PickupTimeUtc.Value.ToLocalTime().ToString("MMM d, h:mm tt")
-                            }
-                            else
-                            {
-                                @:ASAP
-                            }
-                        </span>
-                    </div>
-                </div>
+    <hr class="divider">
 
-                <hr class="divider">
-
-                @* Order Items *@
-                <h3 class="items-heading">Items</h3>
-                <div class="items-list">
-                    @foreach (var item in _order.Items)
-                    {
-                        <div class="order-item">
-                            <span class="order-item-qty">@item.Quantity×</span>
-                            <div class="order-item-details">
-                                <span class="order-item-name">@item.ProductName</span>
-                                <span class="order-item-variant">@item.VariantName</span>
-                                @if (item.Addons.Any())
-                                {
-                                    <div class="order-item-addons">
-                                        @foreach (var addon in item.Addons)
-                                        {
-                                            <span class="addon-tag">+ @(addon.Quantity > 1 ? $"{addon.Quantity}× " : "")@addon.Name</span>
-                                        }
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(item.Notes))
-                                {
-                                    <span class="order-item-notes">"@item.Notes"</span>
-                                }
-                            </div>
-                            <div class="order-item-price">
-                                <PriceDisplay Amount="@CalculateItemSubtotal(item)" Size="PriceDisplay.PriceSize.Small" />
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <hr class="divider">
-
-                @* Total *@
-                <div class="order-total-row">
-                    <span class="order-total-label">Total</span>
-                    <PriceDisplay Amount="@_order.Total" Size="PriceDisplay.PriceSize.ExtraLarge" />
-                </div>
-
-                @* Print Footer - Only visible on print *@
-                <div class="print-footer print-only">
-                    <p>@AppSettings.ReceiptFooter</p>
-                </div>
-
-                @* Payment CTA - Hidden on print *@
-                @if (_order.PaymentStatus == PaymentStatus.Pending && !_isPolling)
+     @* Order Items *@
+              <h3 class="items-heading">Items</h3>
+       <div class="items-list">
+      @foreach (var item in _order.Items)
+          {
+     <div class="order-item">
+     <span class="order-item-qty">@item.Quantity×</span>
+          <div class="order-item-details">
+    <span class="order-item-name">@item.ProductName</span>
+    <span class="order-item-variant">@item.VariantName</span>
+   @if (item.Addons.Any())
+     {
+     <div class="order-item-addons">
+ @foreach (var addon in item.Addons)
                 {
-                    <div class="payment-action no-print">
-                        <button class="btn btn-primary btn-lg w-full" @onclick="PayNow" disabled="@_isProcessingPayment">
-                            @if (_isProcessingPayment)
-                            {
-                                <span class="spinner spinner-sm"></span>
-                                <span>Redirecting...</span>
-                            }
-                            else
-                            {
-                                <span>Complete payment</span>
-                            }
-                        </button>
-                    </div>
-                }
+               <span class="addon-tag">+ @(addon.Quantity > 1 ? $"{addon.Quantity}x " : "")@addon.Name</span>
+           }
+         </div>
+     }
+              @if (!string.IsNullOrEmpty(item.Notes))
+           {
+    <span class="order-item-notes">"@item.Notes"</span>
+      }
+         </div>
+         <div class="order-item-price">
+   <PriceDisplay Amount="@CalculateItemSubtotal(item)" Size="PriceDisplay.PriceSize.Small" />
+    </div>
             </div>
+   }
+      </div>
 
-            <div class="order-card-footer no-print">
-                <a href="/orders" class="btn btn-secondary btn-md">All orders</a>
-                <button type="button" class="btn btn-secondary btn-md" @onclick="PrintReceipt">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-                        <polyline points="6,9 6,2 18,2 18,9"></polyline>
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                        <rect x="6" y="14" width="12" height="8"></rect>
-                    </svg>
-                    Print
-                </button>
-                <a href="/" class="btn btn-secondary btn-md">Back to menu</a>
-            </div>
+       <hr class="divider">
+
+         @* Total *@
+    <div class="order-total-row">
+  <span class="order-total-label">Total</span>
+            <PriceDisplay Amount="@_order.Total" Size="PriceDisplay.PriceSize.ExtraLarge" />
+         </div>
+
+                @* Print Footer *@
+      <div class="print-footer print-only">
+        <p>@AppSettings.ReceiptFooter</p>
+</div>
+
+       @* Payment CTA *@
+        @if (_order.PaymentStatus == PaymentStatus.Pending && !_isPolling)
+    {
+      <div class="payment-action no-print">
+    <button class="btn btn-primary btn-lg w-full" @onclick="PayNow" disabled="@_isProcessingPayment">
+           @if (_isProcessingPayment)
+ {
+          <span class="spinner spinner-sm"></span>
+              <span>Redirecting...</span>
+   }
+         else
+   {
+    <span>Complete payment</span>
+           }
+       </button>
+  </div>
+       }
         </div>
-    }
+
+     <div class="order-card-footer no-print">
+  <a href="/orders" class="btn btn-secondary btn-md">All orders</a>
+         <button type="button" class="btn btn-secondary btn-md" @onclick="PrintReceipt">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
+          <polyline points="6,9 6,2 18,2 18,9"></polyline>
+       <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+     <rect x="6" y="14" width="12" height="8"></rect>
+           </svg>
+      Print
+    </button>
+     <a href="/" class="btn btn-secondary btn-md">Back to menu</a>
+    </div>
+    </div>
+        }
+    </div>
 </div>
 
 @code {

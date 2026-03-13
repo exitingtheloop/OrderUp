@@ -8,7 +8,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--space-6);
-    background: transparent; /* Blend with container wrapper */
+    background: var(--bg);
 }
 
 .login-container {
@@ -24,7 +24,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
     overflow: hidden;
-    box-shadow: var(--shadow-lg); /* Add shadow for depth on white background */
+    box-shadow: var(--shadow-xl);
 }
 
 .login-header {
@@ -108,14 +108,14 @@
     align-items: center;
     gap: var(--space-2);
     font-size: var(--text-sm);
-    color: var(--muted);
-    text-decoration: none;
+    color: var(--muted) !important;
+    text-decoration: none !important;
     transition: color var(--duration-fast) var(--ease-default);
 }
 
 .back-link:hover {
-    color: var(--text);
-    text-decoration: none;
+    color: var(--text) !important;
+    text-decoration: none !important;
 }
 
 /* ----------------------------------------

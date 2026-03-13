@@ -1,17 +1,37 @@
 /* ========================================
-   App Shell - Beyond UI Layout
+   App Shell � Full-width layout
    ======================================== */
 
 .app-shell {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #e8eaed;
+    background: var(--bg);
 }
 
-.app-sidebar {
-    position: relative;
+.app-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: var(--z-sticky);
+}
+
+/* Home page: navbar hidden on desktop, controlled by scroll on mobile */
+.app-navbar-home {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .app-navbar-home {
+        display: block;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .app-navbar-home.navbar-visible {
+        transform: translateY(0);
+    }
 }
 
 .app-main {
@@ -22,69 +42,18 @@
 
 .app-content {
     flex: 1;
-    padding: var(--space-6);
-    padding-bottom: var(--space-12);
     width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
 }
 
-/* ========================================
-   Responsive
-   ======================================== */
+/* ----------------------------------------
+   Navbar offset for fixed header
+   ---------------------------------------- */
+.has-navbar {
+    padding-top: 64px;
+}
 
-/* Mobile - use white background, let card shadows create hierarchy */
 @media (max-width: 768px) {
-    .app-shell {
-        flex-direction: column;
-        background: var(--surface); /* White background on mobile */
-    }
-
-    .app-sidebar {
-        position: sticky;
-        top: 0;
-        z-index: var(--z-sticky);
-    }
-
-    .app-content {
-        padding: var(--space-4);
-        padding-bottom: var(--space-10);
-    }
-}
-
-/* Desktop */
-@media (min-width: 769px) {
-    .app-shell {
-        flex-direction: row;
-        padding: var(--space-3);
-        gap: var(--space-3);
-    }
-
-    .app-sidebar {
-        width: 280px;
-        height: calc(100vh - var(--space-6));
-        position: sticky;
-        top: var(--space-3);
-        flex-shrink: 0;
-    }
-
-    .app-main {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .app-content {
-        padding: var(--space-6);
-        padding-bottom: var(--space-16);
-        background: var(--surface);
-        border-radius: var(--radius-xl);
-        min-height: calc(100vh - var(--space-6));
-    }
-}
-
-/* Wider Desktop */
-@media (min-width: 1400px) {
-    .app-sidebar {
-        width: 300px;
+    .has-navbar {
+        padding-top: 56px;
     }
 }

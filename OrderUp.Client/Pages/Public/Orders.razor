@@ -11,56 +11,70 @@
 <PageTitle>@AppSettings.CafeName - My Orders</PageTitle>
 
 <div class="orders-page">
-    <header class="page-header">
-        <h1 class="page-title">Orders</h1>
-        <p class="page-subtitle">Orders placed from this device</p>
-    </header>
+    @* Dark hero header *@
+    <section class="orders-hero">
+        <div class="orders-hero-inner">
+            <div class="orders-hero-label">
+                <span>Activity</span>
+            </div>
+            <h1 class="orders-hero-title">My Orders</h1>
+            <p class="orders-hero-subtitle">Orders placed from this device</p>
+        </div>
+    </section>
 
-    @if (_loading)
-    {
-        <div class="loading-state">
-            <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading orders..." Centered="true" />
-        </div>
-    }
-    else if (_orders.Count == 0)
-    {
-        <EmptyState IconType="EmptyState.EmptyIcon.Order"
-                    Title="No orders yet"
-                    Description="When you place an order, it will appear here."
-                    ActionText="Browse Menu"
-                    ActionHref="/" />
-    }
-    else
-    {
-        <div class="orders-feed">
-            @foreach (var order in _orders)
-            {
-                <a href="/order-success/@order.Id" class="order-card">
-                    <div class="order-card-main">
-                        <div class="order-card-top">
-                            <span class="order-card-id">Order #@order.Id</span>
-                            <Badge Variant="@GetBadgeVariant(order.PaymentStatus)">@GetPaymentStatusText(order.PaymentStatus)</Badge>
-                        </div>
-                        <div class="order-card-meta">
-                            <span>@order.ItemCount item@(order.ItemCount != 1 ? "s" : "")</span>
-                            <span class="meta-separator">·</span>
-                            <span>@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
-                        </div>
+    <div class="orders-body">
+        @if (_loading)
+        {
+            <div class="loading-state">
+                <LoadingSpinner Size="LoadingSpinner.SpinnerSize.Large" Message="Loading orders..." Centered="true" />
+            </div>
+        }
+        else if (_orders.Count == 0)
+        {
+            <div class="orders-empty-wrap dark-empty-state">
+                <EmptyState IconType="EmptyState.EmptyIcon.Order"
+                            ImageUrl="https://s3.us-west-1.wasabisys.com/orderup/no-orders.png"
+                            Title="No orders yet"
+                            Description="When you place an order, it will appear here.">
+                    <div class="empty-actions">
+                        <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
                     </div>
-                    <div class="order-card-right">
-                        <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
-                        <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </a>
-            }
-        </div>
+                </EmptyState>
+            </div>
+        }
+        else
+        {
+            <div class="orders-feed">
+                @foreach (var order in _orders)
+                {
+                    <a href="/order-success/@order.Id" class="order-card">
+                        <div class="order-card-left">
+                            <div class="order-card-top">
+                                <span class="order-card-id">Order #@order.Id</span>
+                                <Badge Variant="@GetBadgeVariant(order.PaymentStatus)">@GetPaymentStatusText(order.PaymentStatus)
+                                </Badge>
+                            </div>
+                            <div class="order-card-meta">
+                                <span>@order.ItemCount item@(order.ItemCount != 1 ? "s" : "")</span>
+                                <span class="meta-dot"></span>
+                                <span>@order.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                            </div>
+                        </div>
+                        <div class="order-card-right">
+                            <PriceDisplay Amount="@order.Total" Size="PriceDisplay.PriceSize.Base" />
+                            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 5l7 7-7 7" />
+                            </svg>
+                        </div>
+                    </a>
+                }
+            </div>
 
-        <div class="page-footer">
-            <a href="/" class="btn btn-secondary btn-md">Back to Menu</a>
-        </div>
-    }
+            <div class="orders-footer">
+                <a href="/" class="btn btn-secondary btn-md">Back to Menu</a>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
