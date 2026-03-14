@@ -63,6 +63,7 @@ text-transform: uppercase;
 .orders-empty-wrap {
     max-width: 480px;
     margin: 0 auto;
+    padding-bottom: var(--space-12);
 }
 
 

@@ -36,6 +36,11 @@
         if (firstRender)
         {
             await SetupScrollWatcher();
+            await JS.InvokeVoidAsync("ScrollAnimations.init");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("ScrollAnimations.refresh");
         }
     }
 
@@ -47,7 +52,12 @@
         // Re-setup scroll watcher when navigating to/from home
         await InvokeAsync(async () =>
         {
-            try { await SetupScrollWatcher(); } catch { }
+            try
+            {
+                await SetupScrollWatcher();
+                await JS.InvokeVoidAsync("ScrollAnimations.refresh");
+            }
+            catch { }
         });
     }
 

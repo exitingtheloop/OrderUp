@@ -63,10 +63,9 @@
     </div>
         }
 
-    <div class="cart-empty-wrap dark-empty-state">
+    <div class="cart-empty-wrap dark-empty-state" data-animate="fade-up">
            <EmptyState IconType="EmptyState.EmptyIcon.Cart"
               ImageUrl="https://s3.us-west-1.wasabisys.com/orderup/empty-cart.png"
-              Title="Your cart is empty"
          Description="Browse our menu and add items to get started.">
           <div class="empty-actions">
                   <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
@@ -110,7 +109,7 @@
 
           <div class="cart-content-grid">
    @* Cart Items Column *@
-  <section class="cart-items-col">
+  <section class="cart-items-col" data-animate="fade-right">
          <div class="cart-items">
            @foreach (var item in CartState.Items)
      {
@@ -162,7 +161,7 @@
            </section>
 
     @* Checkout Sidebar *@
-<aside class="checkout-col">
+<aside class="checkout-col" data-animate="fade-left" data-delay="200">
            <div class="checkout-card">
        <h2 class="checkout-title">Checkout</h2>
 

@@ -34,7 +34,10 @@
             </svg>
         </div>
     }
-    <h3 class="empty-state-title">@Title</h3>
+    @if (!string.IsNullOrEmpty(Title) && string.IsNullOrEmpty(ImageUrl))
+    {
+        <h3 class="empty-state-title">@Title</h3>
+    }
     @if (!string.IsNullOrEmpty(Description))
     {
         <p class="empty-state-text">@Description</p>

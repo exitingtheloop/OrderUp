@@ -48,11 +48,11 @@
                 <span>Makati City, PH</span>
             </div>
 
-            <div class="hero-center-content">
+            <div class="hero-center-content" data-animate="fade-down">
                 <h1 class="hero-main-title">The Ultimate<br />Cafe Experience</h1>
             </div>
 
-            <div class="hero-bottom">
+            <div class="hero-bottom" data-animate="fade-up" data-delay="200">
                 <div class="hero-tagline">
                     <p>A cozy space for your coffee with very good pastries.</p>
                 </div>
@@ -92,7 +92,7 @@
         <section class="landing-menu-section" id="menu">
        <div class="landing-menu-inner">
            @* Section Header *@
-       <div class="landing-menu-header">
+       <div class="landing-menu-header" data-animate="fade-up">
       <div class="landing-section-label light">
         <span>Our Menu</span>
          </div>
@@ -101,7 +101,7 @@
 
    @* Menu Content: Two-column layout (list left, image right) *@
              <div class="landing-menu-content">
-  <div class="landing-menu-list">
+  <div class="landing-menu-list" data-animate="fade-right">
                @if (!FilteredCategories.Any())
                         {
                             <div class="no-results dark-no-results">
@@ -134,7 +134,7 @@
                             }
                         }
                     </div>
-                    <div class="landing-menu-visual">
+                    <div class="landing-menu-visual" data-animate="fade-left" data-delay="200">
                         <div class="menu-visual-image-wrapper">
                             <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80" alt="Coffee" class="menu-visual-image" />
                         </div>
@@ -146,7 +146,7 @@
         @* ====== FULL PRODUCT GRID ====== *@
         <section class="full-menu-section" id="full-menu">
             <div class="full-menu-inner">
-   <header class="menu-header">
+   <header class="menu-header" data-animate="fade-up">
     <div class="landing-section-label">
      <span>Order Now</span>
 </div>
@@ -156,7 +156,7 @@
 
                 @foreach (var (category, products) in FilteredCategories)
                 {
-                    <section class="menu-section">
+                    <section class="menu-section" data-animate="fade-up">
                         <div class="category-header">
                             <h2 class="category-title">@category.Name</h2>
                             <span class="category-count">@products.Count item@(products.Count != 1 ? "s" : "")</span>
@@ -210,7 +210,7 @@
    @* ====== DARK FOOTER ====== *@
         <footer class="site-footer" id="contact-info">
             <div class="footer-inner">
-      <div class="footer-top">
+      <div class="footer-top" data-animate="fade-up">
          <div class="footer-brand">
          <a class="footer-brand-link" href="">
           <span class="footer-brand-mark">✶</span>
@@ -254,7 +254,7 @@
 
             <div class="footer-divider"></div>
 
-     <div class="footer-bottom">
+     <div class="footer-bottom" data-animate="fade-up" data-delay="200">
         <div class="footer-social">
    <a href="https://instagram.com" target="_blank" rel="noopener" class="footer-social-link" aria-label="Instagram">
          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>

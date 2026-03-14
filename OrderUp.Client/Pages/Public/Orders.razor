@@ -31,10 +31,9 @@
         }
         else if (_orders.Count == 0)
         {
-            <div class="orders-empty-wrap dark-empty-state">
+            <div class="orders-empty-wrap dark-empty-state" data-animate="fade-up">
                 <EmptyState IconType="EmptyState.EmptyIcon.Order"
                             ImageUrl="https://s3.us-west-1.wasabisys.com/orderup/no-orders.png"
-                            Title="No orders yet"
                             Description="When you place an order, it will appear here.">
                     <div class="empty-actions">
                         <a href="/" class="btn btn-primary btn-md">Browse Menu</a>
@@ -44,7 +43,7 @@
         }
         else
         {
-            <div class="orders-feed">
+            <div class="orders-feed" data-animate="fade-up">
                 @foreach (var order in _orders)
                 {
                     <a href="/order-success/@order.Id" class="order-card">
@@ -70,7 +69,7 @@
                 }
             </div>
 
-            <div class="orders-footer">
+            <div class="orders-footer" data-animate="fade-up" data-delay="200">
                 <a href="/" class="btn btn-secondary btn-md">Back to Menu</a>
             </div>
         }

@@ -4,6 +4,82 @@
    ======================================== */
 
 /* ----------------------------------------
+   Smooth Scroll Baseline
+   ---------------------------------------- */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ----------------------------------------
+   Scroll-Reveal Animations
+   ---------------------------------------- */
+[data-animate] {
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    will-change: opacity, transform;
+}
+
+[data-animate].visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* Direction variants */
+[data-animate="fade-up"]    { transform: translateY(28px); }
+[data-animate="fade-down"]  { transform: translateY(-28px); }
+[data-animate="fade-left"]  { transform: translateX(-28px); }
+[data-animate="fade-right"] { transform: translateX(28px); }
+[data-animate="zoom-in"]    { transform: scale(0.93); }
+
+/* Stagger delays */
+[data-delay="100"] { transition-delay: 100ms; }
+[data-delay="200"] { transition-delay: 200ms; }
+[data-delay="300"] { transition-delay: 300ms; }
+[data-delay="400"] { transition-delay: 400ms; }
+[data-delay="500"] { transition-delay: 500ms; }
+[data-delay="600"] { transition-delay: 600ms; }
+
+/* Admin pages: subtler, faster */
+.admin-content [data-animate] {
+    transition-duration: 0.35s;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    [data-animate] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
+/* ----------------------------------------
+   Custom Scrollbar
+   ---------------------------------------- */
+::-webkit-scrollbar {
+    width: 7px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
+}
+
+/* Firefox */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--bg);
+}
+
+/* ----------------------------------------
    CSS Custom Properties (Design Tokens)
    ---------------------------------------- */
 :root {
@@ -825,7 +901,7 @@ textarea.input {
    ---------------------------------------- */
 .empty-state {
     text-align: center;
-    padding: var(--space-12) var(--space-6);
+    padding: var(--space-6) var(--space-6) var(--space-12);
 }
 
 .empty-state-icon {

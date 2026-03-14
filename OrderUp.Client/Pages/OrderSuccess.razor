@@ -44,7 +44,7 @@
 else
         {
     @* Status Banners (hidden on print) *@
-          <div class="no-print">
+          <div class="no-print" data-animate="fade-up">
         @if (_resultParam == "cancel")
       {
    <div class="status-alert status-alert-warning">
@@ -94,7 +94,7 @@ else
             </div>
 
             @* Order Card / Receipt *@
-            <div class="order-card receipt-container">
+            <div class="order-card receipt-container" data-animate="fade-up" data-delay="100">
             @* Print Header *@
    <div class="print-header print-only">
          <h2 class="print-cafe-name">@AppSettings.CafeName</h2>

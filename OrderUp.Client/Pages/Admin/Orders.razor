@@ -40,7 +40,7 @@ else
     else
     {
         @* Stats Row with Refresh Button *@
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2" data-animate="fade-up">
             <div class="order-stats">
                 <strong>Total:</strong> @orders.Count |
                 <strong>Pending:</strong> @orders.Count(o => o.Status == OrderStatus.Pending) |
@@ -82,7 +82,7 @@ else
             </div>
         </div>
 
-        <div class="row">
+        <div class="row" data-animate="fade-up" data-delay="100">
             @foreach (var order in orders.OrderByDescending(o => o.CreatedAtUtc))
             {
                 <div class="col-md-6 col-lg-4 mb-4">
