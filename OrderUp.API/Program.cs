@@ -14,7 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<DataContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+    sqlOptions => sqlOptions.EnableRetryOnFailure(
+        maxRetryCount: 3,
+        maxRetryDelay: TimeSpan.FromSeconds(10),
+        errorNumbersToAdd: null)));
 
 // Add Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -145,6 +149,20 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.MapControllers();
+
+// Health check endpoint for Azure App Service to keep DB connection warm
+app.MapGet("/api/health", async (DataContext db) =>
+{
+    try
+    {
+        await db.Database.CanConnectAsync();
+        return Results.Ok("ok");
+    }
+    catch
+    {
+        return Results.StatusCode(503);
+    }
+});
 
 app.MapFallbackToFile("index.html");
 
